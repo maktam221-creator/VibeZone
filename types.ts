@@ -1,3 +1,1 @@
-// This file is intentionally left blank after transpilation.
-// TypeScript types are removed during the conversion to JavaScript.
-export {};
+// This file is intentionally left blank in the simplified version of the app.

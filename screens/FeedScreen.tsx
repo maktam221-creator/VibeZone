@@ -117,12 +117,16 @@ const FeedScreen = () => {
             { threshold: 0.7 }
         );
 
-        const videoElements = Array.from(containerRef.current?.children || []);
-        videoElements.forEach(el => observer.observe(el));
+        // FIX: Add a null check for containerRef.current and handle its children safely to resolve type errors with IntersectionObserver.
+        const container = containerRef.current;
+        if (container) {
+            const videoElements = Array.from(container.children);
+            videoElements.forEach(el => observer.observe(el));
 
-        return () => {
-             videoElements.forEach(el => observer.unobserve(el));
-        };
+            return () => {
+                 videoElements.forEach(el => observer.unobserve(el));
+            };
+        }
     }, []);
 
     return (

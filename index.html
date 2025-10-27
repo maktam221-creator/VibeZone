@@ -91,7 +91,7 @@
 </head>
   <body>
     <div id="root"></div>
-    <!-- Change script type to 'text/babel' and add data-type='module' to enable in-browser transpilation -->
-    <script type="text/babel" data-type="module" src="./index.tsx"></script>
+    <!-- Configure Babel to transpile both React (JSX) and TypeScript -->
+    <script type="text/babel" data-type="module" data-presets="react,typescript" src="./index.tsx"></script>
   </body>
 </html>

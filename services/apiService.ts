@@ -69,7 +69,7 @@ const saveDb = (db: Database) => {
   });
 
   // Smart Media Archiving to prevent localStorage quota errors from large thumbnail data URLs
-  const MAX_MEDIA_POSTS = 5;
+  const MAX_MEDIA_POSTS = 0; // Keep 0 posts' full data in localStorage to guarantee no quota errors
   if(dbToSave.posts.length > MAX_MEDIA_POSTS) {
     const postsToArchive = dbToSave.posts
       .sort((a: VideoPost, b: VideoPost) => getDateFromPostId(b.id).getTime() - getDateFromPostId(a.id).getTime())
@@ -331,7 +331,126 @@ export const api = {
         localStorage.removeItem(TOKEN_KEY);
         sessionStorage.removeItem(TOKEN_KEY);
     } catch(e) { console.warn("Could not remove token from storage on logout", e); }
-    dbCache = null;
+    dbCache = null; // Clear cache on logout
+  },
+  
+  deleteVideoPost(postId: string): { success: boolean; error?: string } {
+    const userId = _getAuthenticatedUserId();
+    if (!userId) {
+      return { success: false, error: 'الجلسة غير صالحة. الرجاء تسجيل الدخول مرة أخرى.' };
+    }
+    const db = getDb();
+    
+    const postIndex = db.posts.findIndex(p => p.id === postId);
+    if (postIndex === -1) {
+      return { success: false, error: 'لم يتم العثور على المنشور.' };
+    }
+
+    if (db.posts[postIndex].user.id !== userId) {
+      return { success: false, error: 'غير مصرح لك بحذف هذا المنشور.' };
+    }
+    
+    // Delete post and associated data
+    db.posts.splice(postIndex, 1);
+    db.likes = db.likes.filter(l => l.postId !== postId);
+    db.comments = db.comments.filter(c => c.postId !== postId);
+    db.views = db.views.filter(v => v.postId !== postId);
+    
+    saveDb(db);
+    return { success: true };
+  },
+  
+  updateUserProfile(updatedData: { name?: string, username?: string, bio?: string, avatarUrl?: string }): { user: User | null; error?: string } {
+    const userId = _getAuthenticatedUserId();
+    if (!userId) {
+      return { user: null, error: 'الجلسة غير صالحة. الرجاء تسجيل الدخول مرة أخرى.' };
+    }
+    const db = getDb();
+    const userIndex = db.users.findIndex(u => u.id === userId);
+    if (userIndex === -1) {
+      return { user: null, error: 'لم يتم العثور على المستخدم.' };
+    }
+    
+    const oldUsername = db.users[userIndex].username;
+
+    // Validate and update username
+    if (updatedData.username && updatedData.username !== oldUsername) {
+      if (db.users.some(u => u.username.toLowerCase() === updatedData.username!.toLowerCase())) {
+        return { user: null, error: 'اسم المستخدم هذا محجوز بالفعل.' };
+      }
+      db.users[userIndex].username = updatedData.username;
+    }
+    
+    // Update other fields
+    if (updatedData.name !== undefined) db.users[userIndex].name = updatedData.name;
+    if (updatedData.bio !== undefined) db.users[userIndex].bio = updatedData.bio;
+    if (updatedData.avatarUrl !== undefined) db.users[userIndex].avatarUrl = updatedData.avatarUrl;
+
+    const { password, ...publicUser } = db.users[userIndex];
+    
+    // Update denormalized data in posts and comments
+    db.posts.forEach(post => {
+      if (post.user.id === userId) {
+        post.user = { ...publicUser };
+      }
+    });
+    db.comments.forEach(comment => {
+      if (comment.user.id === userId) {
+        comment.user = { ...publicUser };
+      }
+    });
+    // Update username in follows
+    if (updatedData.username && updatedData.username !== oldUsername) {
+        db.follows.forEach(follow => {
+            if(follow.followingUsername === oldUsername) {
+                follow.followingUsername = updatedData.username!;
+            }
+        });
+    }
+    
+    saveDb(db);
+    return { user: publicUser, error: undefined };
+  },
+
+  changePassword(oldPass: string, newPass: string): { success: boolean; error?: string } {
+    const userId = _getAuthenticatedUserId();
+    if (!userId) {
+      return { success: false, error: 'الجلسة غير صالحة. الرجاء تسجيل الدخول مرة أخرى.' };
+    }
+    const db = getDb();
+    const userIndex = db.users.findIndex(u => u.id === userId);
+    if (userIndex === -1) {
+      return { success: false, error: 'لم يتم العثور على المستخدم.' };
+    }
+
+    if (db.users[userIndex].password !== oldPass) {
+      return { success: false, error: 'كلمة المرور الحالية غير صحيحة.' };
+    }
+
+    db.users[userIndex].password = newPass;
+    saveDb(db);
+    return { success: true };
+  },
+
+  deleteCurrentUserAccount(): { success: boolean, error?: string } {
+    const userId = _getAuthenticatedUserId();
+    if (!userId) {
+      return { success: false, error: 'الجلسة غير صالحة. الرجاء تسجيل الدخول مرة أخرى.' };
+    }
+    const db = getDb();
+    const userIndex = db.users.findIndex(u => u.id === userId);
+    if (userIndex === -1) {
+      return { success: false, error: 'لم يتم العثور على المستخدم.' };
+    }
+    
+    const DEACTIVATION_PERIOD_MS = 30 * 24 * 60 * 60 * 1000;
+    const deactivationDate = new Date(Date.now() + DEACTIVATION_PERIOD_MS);
+    db.users[userIndex].deactivatedUntil = deactivationDate.toISOString();
+    
+    api.logout(); // Logout the user
+    saveDb(db);
+    
+    return { success: true };
   },
 
   getCurrentUser(): User | null {
@@ -343,428 +462,376 @@ export const api = {
     const { password, ...userToReturn } = user;
     return userToReturn;
   },
+
+  getUserProfile(profileId: string): { user: User; stats: { following: number; followers: number; likes: number }; posts: VideoPost[] } | null {
+      const db = getDb();
+      const user = db.users.find(u => u.id === profileId);
+      if(!user) return null;
+      
+      const posts = this.getUserPosts(profileId);
+      const followers = db.follows.filter(f => f.followingUsername === user.username).length;
+      const following = db.follows.filter(f => f.followerId === user.id).length;
+      const likes = posts.reduce((acc, post) => acc + post.likes, 0);
+      
+      const { password, ...publicUser } = user;
+
+      return {
+        user: publicUser,
+        stats: { following, followers, likes },
+        posts: posts,
+      }
+  },
+
+  // --- Feed & Posts ---
+  getForYouFeed(): VideoPost[] {
+    const db = getDb();
+    // Simple shuffle for variety
+    return [...db.posts].sort(() => Math.random() - 0.5);
+  },
+
+  getFollowingFeed(): VideoPost[] {
+    const userId = _getAuthenticatedUserId();
+    if (!userId) return [];
+    const db = getDb();
+    const followedUsernames = new Set(db.follows.filter(f => f.followerId === userId).map(f => f.followingUsername));
+    return db.posts
+        .filter(p => followedUsernames.has(p.user.username))
+        .sort((a, b) => getDateFromPostId(b.id).getTime() - getDateFromPostId(a.id).getTime());
+  },
   
+  getPostById(postId: string): VideoPost | undefined {
+    return getDb().posts.find(p => p.id === postId);
+  },
+  
+  getUserPosts(userId: string): VideoPost[] {
+    const db = getDb();
+    return db.posts
+      .filter(p => p.user.id === userId)
+      .sort((a, b) => getDateFromPostId(b.id).getTime() - getDateFromPostId(a.id).getTime());
+  },
+  
+  getLikedPosts(): VideoPost[] {
+    const userId = _getAuthenticatedUserId();
+    if (!userId) return [];
+    const db = getDb();
+    const likedPostIds = new Set(db.likes.filter(l => l.userId === userId).map(l => l.postId));
+    return db.posts.filter(p => likedPostIds.has(p.id))
+        .sort((a, b) => getDateFromPostId(b.id).getTime() - getDateFromPostId(a.id).getTime());
+  },
+
+  addVideoPost(postData: { caption: string; songName: string; videoUrl: string; thumbnailUrl?: string; mimeType: string | null; }): VideoPost | null {
+    const userId = _getAuthenticatedUserId();
+    if (!userId) {
+      console.error("User not authenticated. Cannot add post.");
+      return null;
+    }
+    const db = getDb();
+    const user = db.users.find(u => u.id === userId);
+    if (!user) {
+      console.error("Authenticated user not found in DB. This should not happen.");
+      return null;
+    }
+    const { password, ...publicUser } = user;
+
+    const newPost: VideoPost = {
+      id: `video-${new Date().toISOString()}`,
+      user: publicUser,
+      caption: postData.caption,
+      songName: postData.songName,
+      videoUrl: postData.videoUrl,
+      thumbnailUrl: postData.thumbnailUrl,
+      mimeType: postData.mimeType ?? undefined,
+      likes: 0,
+      commentsCount: 0,
+      shares: Math.floor(Math.random() * 50),
+    };
+
+    db.posts.push(newPost);
+    saveDb(db);
+    return newPost;
+  },
+  
+  logView(postId: string): void {
+      const userId = _getAuthenticatedUserId();
+      if (!userId) return; // Only log views for authenticated users
+      const db = getDb();
+      const now = Date.now();
+      // Only count one view per user per post per session to avoid spam
+      if (!db.views.some(v => v.userId === userId && v.postId === postId)) {
+          db.views.push({ userId, postId, timestamp: now });
+          saveDb(db);
+      }
+  },
+  
+  // --- Interactions ---
   getInteractions(): { likedVideos: Set<string>; followedUsers: Set<string> } {
     const userId = _getAuthenticatedUserId();
     if (!userId) {
       return { likedVideos: new Set(), followedUsers: new Set() };
     }
     const db = getDb();
-    
-    const likedVideos = new Set(
-      db.likes.filter(like => like.userId === userId).map(like => like.postId)
-    );
-
-    const followedUsers = new Set(
-      db.follows.filter(follow => follow.followerId === userId).map(follow => follow.followingUsername)
-    );
-
+    const likedVideos = new Set(db.likes.filter(l => l.userId === userId).map(l => l.postId));
+    const followedUsers = new Set(db.follows.filter(f => f.followerId === userId).map(f => f.followingUsername));
     return { likedVideos, followedUsers };
   },
 
-  deleteCurrentUserAccount(): { success: boolean; error?: string } {
-    const userId = _getAuthenticatedUserId();
-    if (!userId) {
-      return { success: false, error: 'الجلسة غير صالحة. الرجاء تسجيل الدخول مرة أخرى.' };
-    }
-
-    const db = getDb();
-    const userIndex = db.users.findIndex(u => u.id === userId);
-    if (userIndex === -1) {
-      this.logout();
-      return { success: false, error: 'المستخدم غير موجود.' };
-    }
-    
-    const deactivationDate = new Date();
-    deactivationDate.setDate(deactivationDate.getDate() + 30);
-    db.users[userIndex].deactivatedUntil = deactivationDate.toISOString();
-
-    this.logout();
-    saveDb(db);
-    
-    return { success: true };
-  },
-
-  updateUserProfile(updates: { name?: string, username?: string, bio?: string, avatarUrl?: string }): { user: User, error: null } | { user: null, error: string } {
-    const userId = _getAuthenticatedUserId();
-    if (!userId) {
-        return { user: null, error: 'الجلسة غير صالحة.' };
-    }
-
-    const db = getDb();
-    const userIndex = db.users.findIndex(u => u.id === userId);
-    if (userIndex === -1) {
-        return { user: null, error: 'المستخدم غير موجود.' };
-    }
-
-    const currentUser = db.users[userIndex];
-    const oldUsername = currentUser.username;
-
-    if (updates.username && updates.username !== currentUser.username) {
-        if (db.users.some(u => u.username.toLowerCase() === updates.username!.toLowerCase() && u.id !== userId)) {
-            return { user: null, error: 'اسم المستخدم محجوز بالفعل.' };
-        }
-    }
-    
-    const updatedUser = { ...currentUser, ...updates };
-    db.users[userIndex] = updatedUser;
-
-    if (updates.username && updates.username !== oldUsername) {
-        db.posts.forEach(post => { if (post.user.id === userId) post.user.username = updates.username!; });
-        db.comments.forEach(comment => { if (comment.user.id === userId) comment.user.username = updates.username!; });
-        db.follows.forEach(follow => { if (follow.followingUsername === oldUsername) follow.followingUsername = updates.username!; });
-        db.notifications.forEach(n => { if (n.user.id === userId) n.user.username = updates.username!; });
-    }
-
-     if (updates.avatarUrl) {
-        db.posts.forEach(post => { if (post.user.id === userId) post.user.avatarUrl = updates.avatarUrl!; });
-        db.comments.forEach(comment => { if (comment.user.id === userId) comment.user.avatarUrl = updates.avatarUrl!; });
-        db.notifications.forEach(n => { if (n.user.id === userId) n.user.avatarUrl = updates.avatarUrl!; });
-    }
-
-    saveDb(db);
-    const { password, ...userToReturn } = updatedUser;
-    return { user: userToReturn, error: null };
-  },
-
-  changePassword(oldPass: string, newPass: string): { success: boolean; error?: string } {
-    const userId = _getAuthenticatedUserId();
-    if (!userId) {
-        return { success: false, error: 'الجلسة غير صالحة.' };
-    }
-    const db = getDb();
-    const userIndex = db.users.findIndex(u => u.id === userId);
-    if (userIndex === -1) {
-        return { success: false, error: 'المستخدم غير موجود.' };
-    }
-    const user = db.users[userIndex];
-    if (user.password !== oldPass) {
-        return { success: false, error: 'كلمة المرور الحالية غير صحيحة.' };
-    }
-    db.users[userIndex].password = newPass;
-    saveDb(db);
-    return { success: true };
-  },
-
-  getUserProfile(profileId: string) {
-    const db = getDb();
-    const user = db.users.find(u => u.id === profileId);
-    if (!user) return null;
-
-    const { password, ...userPublic } = user;
-    const posts = this.getUserPosts(profileId);
-    const stats = this.getUserStats(profileId);
-    
-    return { user: userPublic, posts, stats };
-  },
-
-  getUserStats(userId: string) {
-      const db = getDb();
-      const user = db.users.find(u => u.id === userId);
-      if (!user) return { following: 0, followers: 0, likes: 0 };
-      
-      const following = db.follows.filter(f => f.followerId === userId).length;
-      const followers = db.follows.filter(f => f.followingUsername === user.username).length;
-      const likes = db.posts.filter(p => p.user.id === userId).reduce((sum, post) => sum + post.likes, 0);
-      
-      return { following, followers, likes };
-  },
-
-  // --- Feeds ---
-  getForYouFeed(): VideoPost[] {
-    const db = getDb();
-    return [...db.posts].sort(() => 0.5 - Math.random());
-  },
-
-  getFollowingFeed(): VideoPost[] {
-    const userId = _getAuthenticatedUserId();
-    if (!userId) return [];
-    
-    const db = getDb();
-    const followedUsernames = new Set(db.follows.filter(f => f.followerId === userId).map(f => f.followingUsername));
-
-    return db.posts
-        .filter(p => followedUsernames.has(p.user.username))
-        .sort((a, b) => getDateFromPostId(b.id).getTime() - getDateFromPostId(a.id).getTime());
-  },
-  
-  getUserPosts(userId: string): VideoPost[] {
-    const db = getDb();
-    return db.posts.filter(p => p.user.id === userId)
-        .sort((a, b) => getDateFromPostId(b.id).getTime() - getDateFromPostId(a.id).getTime());
-  },
-  
-  getLikedPosts(): VideoPost[] {
-      const userId = _getAuthenticatedUserId();
-      if (!userId) return [];
-      const db = getDb();
-      const likedPostIds = new Set(db.likes.filter(l => l.userId === userId).map(l => l.postId));
-      return db.posts.filter(p => likedPostIds.has(p.id))
-          .sort((a, b) => getDateFromPostId(b.id).getTime() - getDateFromPostId(a.id).getTime());
-  },
-  
-  getPostById(postId: string): VideoPost | undefined {
-      const db = getDb();
-      return db.posts.find(p => p.id === postId);
-  },
-
-  // --- Post Management ---
-  addVideoPost(postData: { caption: string; songName: string; videoUrl: string; thumbnailUrl?: string; mimeType: string | null; }): VideoPost | null {
-    const userId = _getAuthenticatedUserId();
-    if (!userId) return null;
-    const db = getDb();
-    const user = db.users.find(u => u.id === userId);
-    if (!user) return null;
-
-    const { password, ...userPublic } = user;
-    const newPost: VideoPost = {
-        id: `video-${new Date().toISOString()}`,
-        user: userPublic,
-        ...postData,
-        likes: 0,
-        commentsCount: 0,
-        shares: 0,
-    };
-    db.posts.unshift(newPost);
-    saveDb(db);
-    return newPost;
-  },
-  
-  deleteVideoPost(postId: string): { success: boolean, error?: string } {
-    const userId = _getAuthenticatedUserId();
-    if (!userId) return { success: false, error: 'الجلسة غير صالحة.' };
-
-    const db = getDb();
-    const postIndex = db.posts.findIndex(p => p.id === postId);
-    if (postIndex === -1) return { success: false, error: 'المنشور غير موجود.' };
-
-    if (db.posts[postIndex].user.id !== userId) {
-        return { success: false, error: 'لا تملك صلاحية حذف هذا المنشور.' };
-    }
-    
-    db.posts.splice(postIndex, 1);
-    db.comments = db.comments.filter(c => c.postId !== postId);
-    db.likes = db.likes.filter(l => l.postId !== postId);
-    db.notifications = db.notifications.filter(n => n.post?.id !== postId);
-
-    saveDb(db);
-    return { success: true };
-  },
-
-  logView(postId: string): void {
-      // This is a simple view counter for demonstration. A real app would have more complex logic.
-      const userId = _getAuthenticatedUserId() || 'anonymous';
-      const db = getDb();
-      if (!db.views.some(v => v.userId === userId && v.postId === postId)) {
-          db.views.push({ userId, postId, timestamp: Date.now() });
-          // Note: In this simulation, view count on the post object isn't updated to avoid constant DB writes.
-          saveDb(db);
-      }
-  },
-
-  // --- Interactions ---
   toggleLike(postId: string): { newLikesCount: number; isLiked: boolean } {
     const userId = _getAuthenticatedUserId();
-    if (!userId) throw new Error("User not authenticated");
-    
+    if (!userId) {
+      throw new Error("User not authenticated");
+    }
     const db = getDb();
-    const postIndex = db.posts.findIndex(p => p.id === postId);
-    if (postIndex === -1) throw new Error("Post not found");
-    
-    const post = db.posts[postIndex];
+    const post = db.posts.find(p => p.id === postId);
+    if (!post) {
+      throw new Error("Post not found");
+    }
+
     const likeIndex = db.likes.findIndex(l => l.userId === userId && l.postId === postId);
-    
+    let isLiked = false;
+
     if (likeIndex > -1) {
+      // Unlike
       db.likes.splice(likeIndex, 1);
       post.likes = Math.max(0, post.likes - 1);
-      db.posts[postIndex] = post;
-      saveDb(db);
-      return { newLikesCount: post.likes, isLiked: false };
     } else {
+      // Like
       db.likes.push({ userId, postId });
       post.likes += 1;
-      db.posts[postIndex] = post;
-      this.createNotification(post.user.id, userId, 'like', postId);
-      saveDb(db);
-      return { newLikesCount: post.likes, isLiked: true };
+      isLiked = true;
+      // Add notification
+      if(userId !== post.user.id) {
+         _addNotification('like', post.user.id, { post });
+      }
     }
+
+    saveDb(db);
+    return { newLikesCount: post.likes, isLiked };
   },
 
   toggleFollow(usernameToFollow: string): { isFollowing: boolean } {
-    const userId = _getAuthenticatedUserId();
-    if (!userId) throw new Error("User not authenticated");
-    
+    const followerId = _getAuthenticatedUserId();
+    if (!followerId) {
+      throw new Error("User not authenticated");
+    }
     const db = getDb();
     const userToFollow = db.users.find(u => u.username === usernameToFollow);
-    if (!userToFollow || userToFollow.id === userId) throw new Error("Invalid user to follow");
-
-    const followIndex = db.follows.findIndex(f => f.followerId === userId && f.followingUsername === usernameToFollow);
-    
-    if (followIndex > -1) {
-      db.follows.splice(followIndex, 1);
-      saveDb(db);
-      return { isFollowing: false };
-    } else {
-      db.follows.push({ followerId: userId, followingUsername: usernameToFollow });
-      this.createNotification(userToFollow.id, userId, 'follow');
-      saveDb(db);
-      return { isFollowing: true };
+    if (!userToFollow) {
+      throw new Error("User to follow not found");
     }
+
+    const followIndex = db.follows.findIndex(f => f.followerId === followerId && f.followingUsername === usernameToFollow);
+    let isFollowing = false;
+
+    if (followIndex > -1) {
+      // Unfollow
+      db.follows.splice(followIndex, 1);
+    } else {
+      // Follow
+      db.follows.push({ followerId, followingUsername: usernameToFollow });
+      isFollowing = true;
+      _addNotification('follow', userToFollow.id);
+    }
+
+    saveDb(db);
+    return { isFollowing };
+  },
+  
+  getUserStats(userId: string): { following: number; followers: number; likes: number } {
+    const db = getDb();
+    const user = db.users.find(u => u.id === userId);
+    if (!user) return { following: 0, followers: 0, likes: 0 };
+
+    const following = db.follows.filter(f => f.followerId === userId).length;
+    const followers = db.follows.filter(f => f.followingUsername === user.username).length;
+    const userPosts = db.posts.filter(p => p.user.id === userId);
+    const likes = userPosts.reduce((sum, post) => sum + post.likes, 0);
+
+    return { following, followers, likes };
   },
 
   getFollowers(userId: string): User[] {
     const db = getDb();
-    const targetUser = db.users.find(u => u.id === userId);
-    if (!targetUser) return [];
-    
-    const followerUsernames = new Set(db.follows.filter(f => f.followingUsername === targetUser.username).map(f => f.followerId));
-    return db.users
-        .filter(u => followerUsernames.has(u.id))
-        .map(({ password, ...userPublic }) => userPublic);
+    const user = db.users.find(u => u.id === userId);
+    if(!user) return [];
+    const followerIds = new Set(db.follows.filter(f => f.followingUsername === user.username).map(f => f.followerId));
+    return db.users.filter(u => followerIds.has(u.id)).map(u => {
+      const { password, ...publicUser } = u;
+      return publicUser;
+    });
   },
   
   getFollowing(userId: string): User[] {
     const db = getDb();
     const followingUsernames = new Set(db.follows.filter(f => f.followerId === userId).map(f => f.followingUsername));
-    return db.users
-        .filter(u => followingUsernames.has(u.username))
-        .map(({ password, ...userPublic }) => userPublic);
+    return db.users.filter(u => followingUsernames.has(u.username)).map(u => {
+      const { password, ...publicUser } = u;
+      return publicUser;
+    });
   },
 
   // --- Comments ---
   getCommentsForPost(postId: string): Comment[] {
     const db = getDb();
-    return db.comments.filter(c => c.postId === postId)
-        .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+    return db.comments
+      .filter(c => c.postId === postId)
+      .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
   },
 
   addComment(postId: string, text: string): Comment {
     const userId = _getAuthenticatedUserId();
-    if (!userId) throw new Error("User not authenticated");
-    
+    if (!userId) {
+      throw new Error("User not authenticated");
+    }
     const db = getDb();
     const user = db.users.find(u => u.id === userId);
-    if (!user) throw new Error("User not found");
-
     const post = db.posts.find(p => p.id === postId);
-    if (!post) throw new Error("Post not found");
-
-    const { password, ...userPublic } = user;
+    if (!user || !post) {
+      throw new Error("User or Post not found");
+    }
+    const { password, ...publicUser } = user;
     const newComment: Comment = {
       id: `comment-${Date.now()}`,
       postId,
-      user: userPublic,
+      user: publicUser,
       text,
       timestamp: new Date().toISOString(),
     };
     db.comments.push(newComment);
-
-    const postIndex = db.posts.findIndex(p => p.id === postId);
-    if (postIndex !== -1) {
-      db.posts[postIndex].commentsCount += 1;
-    }
+    post.commentsCount += 1;
     
-    this.createNotification(post.user.id, userId, 'comment', postId, text);
+    if(userId !== post.user.id) {
+        _addNotification('comment', post.user.id, { post, commentText: text });
+    }
+
     saveDb(db);
     return newComment;
   },
 
-  // --- DMs & Inbox ---
+  // --- Inbox & DMs ---
   getConversations(): ConversationPreview[] {
     const userId = _getAuthenticatedUserId();
     if (!userId) return [];
     const db = getDb();
-    const conversationsMap = new Map<string, ConversationPreview>();
 
-    db.direct_messages
-        .filter(dm => dm.senderId === userId || dm.recipientId === userId)
-        .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime())
-        .forEach(dm => {
-            const otherUserId = dm.senderId === userId ? dm.recipientId : dm.senderId;
-            const otherUser = db.users.find(u => u.id === otherUserId);
-            if (!otherUser) return;
-            
-            const { password, ...otherUserPublic } = otherUser;
-            const isRead = dm.senderId === userId ? true : dm.isRead;
+    const conversationsMap: { [key: string]: ConversationPreview } = {};
+    
+    db.direct_messages.forEach(msg => {
+        if(msg.senderId === userId || msg.recipientId === userId) {
+            const otherUserId = msg.senderId === userId ? msg.recipientId : msg.senderId;
+            const existing = conversationsMap[otherUserId];
+            if (!existing || new Date(msg.timestamp) > new Date(existing.timestamp)) {
+                const otherUser = db.users.find(u => u.id === otherUserId);
+                if (otherUser) {
+                    const { password, ...publicUser } = otherUser;
+                    conversationsMap[otherUserId] = {
+                        user: publicUser,
+                        lastMessage: msg.text,
+                        timestamp: msg.timestamp,
+                        isRead: msg.senderId === userId || msg.isRead,
+                    }
+                }
+            }
+        }
+    });
 
-            conversationsMap.set(otherUserId, {
-                user: otherUserPublic,
-                lastMessage: dm.text,
-                timestamp: dm.timestamp,
-                isRead: isRead,
-            });
-        });
-        
-    return Array.from(conversationsMap.values()).sort((a,b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+    return Object.values(conversationsMap).sort((a,b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
   },
 
   getChatHistory(otherUserId: string): DirectMessage[] {
     const userId = _getAuthenticatedUserId();
     if (!userId) return [];
     const db = getDb();
-    return db.direct_messages.filter(
-        dm => (dm.senderId === userId && dm.recipientId === otherUserId) || (dm.senderId === otherUserId && dm.recipientId === userId)
-    ).sort((a,b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+    const history = db.direct_messages.filter(msg => 
+        (msg.senderId === userId && msg.recipientId === otherUserId) ||
+        (msg.senderId === otherUserId && msg.recipientId === userId)
+    );
+
+    // Mark messages as read
+    history.forEach(msg => {
+        if(msg.recipientId === userId && !msg.isRead) {
+            msg.isRead = true;
+        }
+    });
+    saveDb(db);
+
+    return history.sort((a,b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
   },
 
   sendMessage(recipientId: string, text: string): DirectMessage {
     const senderId = _getAuthenticatedUserId();
-    if (!senderId) throw new Error("User not authenticated");
-    
+    if (!senderId) {
+      throw new Error("User not authenticated");
+    }
     const db = getDb();
     const newMessage: DirectMessage = {
-        id: `dm-${Date.now()}`,
-        senderId,
-        recipientId,
-        text,
-        timestamp: new Date().toISOString(),
-        isRead: false,
+      id: `dm-${Date.now()}`,
+      senderId,
+      recipientId,
+      text,
+      timestamp: new Date().toISOString(),
+      isRead: false
     };
     db.direct_messages.push(newMessage);
-    this.createNotification(recipientId, senderId, 'message');
+    _addNotification('message', recipientId);
     saveDb(db);
     return newMessage;
   },
   
   getConversationTheme(otherUserId: string): string | null {
     const userId = _getAuthenticatedUserId();
-    if (!userId) return null;
-    const db = getDb();
-    const convId = getConversationId(userId, otherUserId);
-    return db.conversation_themes[convId] || null;
+    if(!userId) return null;
+    const conversationId = getConversationId(userId, otherUserId);
+    return getDb().conversation_themes[conversationId] || null;
   },
 
   setConversationTheme(otherUserId: string, themeClass: string): void {
-    const userId = _getAuthenticatedUserId();
-    if (!userId) return;
-    const db = getDb();
-    const convId = getConversationId(userId, otherUserId);
-    db.conversation_themes[convId] = themeClass;
-    saveDb(db);
-  },
-
-  // --- Notifications ---
-  createNotification(recipientId: string, actorId: string, type: NotificationType, postId?: string, commentText?: string): void {
-      if (recipientId === actorId) return;
+      const userId = _getAuthenticatedUserId();
+      if(!userId) return;
       const db = getDb();
-      const actor = db.users.find(u => u.id === actorId);
-      if (!actor) return;
-
-      const { password, ...actorPublic } = actor;
-      const newNotification: Notification & { recipientId: string } = {
-          id: `notif-${Date.now()}`, recipientId, type, user: actorPublic,
-          post: postId ? db.posts.find(p => p.id === postId) : undefined,
-          commentText, timestamp: new Date().toISOString(), isRead: false,
-      };
-      db.notifications.unshift(newNotification);
+      const conversationId = getConversationId(userId, otherUserId);
+      db.conversation_themes[conversationId] = themeClass;
       saveDb(db);
   },
 
+  // --- Notifications ---
   getNotifications(): Notification[] {
     const userId = _getAuthenticatedUserId();
     if (!userId) return [];
     const db = getDb();
-    return db.notifications.filter(n => n.recipientId === userId)
-        .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-  },
+    return db.notifications
+      .filter(n => n.recipientId === userId)
+      .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+  }
+
+};
+
+// --- Internal Functions ---
+const _addNotification = (
+    type: NotificationType, 
+    recipientId: string, 
+    data: { post?: VideoPost, commentText?: string } = {}
+): void => {
+    const senderId = _getAuthenticatedUserId();
+    if (!senderId || senderId === recipientId) return; // Don't notify self
+
+    const db = getDb();
+    const sender = db.users.find(u => u.id === senderId);
+    if (!sender) return;
+
+    const { password, ...publicSender } = sender;
+    const newNotification: Notification & { recipientId: string } = {
+        id: `notif-${Date.now()}`,
+        type,
+        user: publicSender,
+        post: data.post,
+        commentText: data.commentText,
+        timestamp: new Date().toISOString(),
+        isRead: false,
+        recipientId: recipientId
+    };
+    db.notifications.unshift(newNotification); // Add to beginning
+    if (db.notifications.length > 50) { // Limit notifications
+        db.notifications.pop();
+    }
+    // Note: Don't saveDb here to avoid recursive saves, rely on the calling function to save.
 };

@@ -13,7 +13,7 @@ const fileToBase64 = (file: File): Promise<string> => {
       const reader = new FileReader();
       reader.readAsDataURL(file);
       reader.onload = () => resolve(reader.result as string);
-      reader.onerror = (error) => reject(error);
+      reader.onerror = () => reject(reader.error || new Error('An unknown error occurred while reading the file.'));
     });
 };
 
@@ -94,6 +94,14 @@ export const CreateScreen: React.FC<CreateScreenProps> = ({ onPostCreated, addVi
     const file = event.target.files?.[0];
     if (!file) return;
 
+    const MAX_FILE_SIZE_MB = 2;
+    const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
+    if (file.size > MAX_FILE_SIZE_BYTES) {
+        setError(`حجم الملف كبير جدًا. الحد الأقصى هو ${MAX_FILE_SIZE_MB} ميجابايت.`);
+        event.target.value = ''; // Reset file input
+        return;
+    }
+
     setError(null);
     setIsProcessing(true);
     setFileType(file.type);
@@ -119,7 +127,10 @@ export const CreateScreen: React.FC<CreateScreenProps> = ({ onPostCreated, addVi
         setThumbnailUrl(dataUrl);
       }
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : String(err);
+      const errorMessage = (err instanceof Error || (err && typeof err === 'object' && 'message' in err)) 
+        ? (err as Error).message 
+        : String(err);
+      
       console.error('Failed to process file:', err);
       setError(`فشل في معالجة الملف. ${errorMessage}. يرجى التأكد من أن صيغة الملف مدعومة والمحاولة مرة أخرى.`);
       setFilePreview(null);

@@ -1,7 +1,3 @@
-
-
-
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { type Screen, type VideoPost, type User, type Comment, type FeedTab, type Theme, type ConversationPreview, type DirectMessage } from './types';
 import { BottomNav } from './components/BottomNav';
@@ -64,7 +60,18 @@ const App: React.FC = () => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [activeScreen, setActiveScreen] = useState<Screen>('feed');
   const [showLoginScreen, setShowLoginScreen] = useState(false);
-  const [theme, setTheme] = useState<Theme>(localStorage.getItem('vibezone-theme') as Theme || 'dark');
+  const getInitialTheme = (): Theme => {
+    try {
+      const storedTheme = localStorage.getItem('vibezone-theme');
+      if (storedTheme === 'light' || storedTheme === 'dark') {
+        return storedTheme;
+      }
+    } catch (e) {
+      console.warn('Could not access localStorage to get theme.', e);
+    }
+    return 'dark'; // Default theme
+  };
+  const [theme, setTheme] = useState<Theme>(getInitialTheme());
 
   // Screen states
   const [isEditingProfile, setIsEditingProfile] = useState(false);
@@ -100,7 +107,11 @@ const App: React.FC = () => {
     const root = window.document.documentElement;
     root.classList.remove('light', 'dark');
     root.classList.add(theme);
-    localStorage.setItem('vibezone-theme', theme);
+    try {
+        localStorage.setItem('vibezone-theme', theme);
+    } catch (e) {
+        console.warn('Could not save theme to localStorage.', e);
+    }
   }, [theme]);
 
   const toggleTheme = () => {

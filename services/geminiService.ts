@@ -1,8 +1,19 @@
 import { GoogleGenAI, Chat, Type } from "@google/genai";
 import type { VideoPost, LiveComment } from '../types';
 
+// Singleton instance, lazily initialized
+let ai: GoogleGenAI | null = null;
+
+function getAiInstance(): GoogleGenAI {
+    if (!ai) {
+        ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    }
+    return ai;
+}
+
+
 export const createChatSession = (): Chat => {
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  const ai = getAiInstance();
   const chat = ai.chats.create({
     model: 'gemini-2.5-flash',
     config: {
@@ -13,7 +24,7 @@ export const createChatSession = (): Chat => {
 };
 
 export const suggestCaption = async (context?: string): Promise<string> => {
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    const ai = getAiInstance();
     const prompt = `اقترح وصفاً قصيراً وجذاباً ورائجاً باللغة العربية لفيديو على تطبيق VibeZone. قم بتضمين 1-3 هاشتاجات ذات صلة. ${context ? `الفيديو يدور حول: "${context}"` : ''}`;
     const response = await ai.models.generateContent({
         model: 'gemini-2.5-flash',
@@ -23,7 +34,7 @@ export const suggestCaption = async (context?: string): Promise<string> => {
 };
 
 export const generateLiveComments = async (topic: string): Promise<LiveComment[]> => {
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    const ai = getAiInstance();
     const prompt = `أنت مشاهد في بث مباشر على تطبيق VibeZone. موضوع البث هو "${topic}". قم بإنشاء قائمة من 15 تعليقًا متنوعًا قد يكتبها الجمهور. يجب أن تكون التعليقات قصيرة، واقعية، وباللهجة العامية العربية (خليط من اللهجات). اجعلها متنوعة بين الأسئلة، الإطراءات، النكات، والتعليقات العشوائية.
 قدم الإجابة كـ JSON array. يجب أن يمثل كل كائن في الـ array تعليقًا واحدًا ويجب أن يكون له البنية التالية:
 - id: سلسلة فريدة.

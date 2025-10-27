@@ -1,6 +1,8 @@
 import React, { useRef, useEffect, useState } from 'react';
-import { videos } from '../data';
+import { videos as initialVideos } from '../data';
 import { HeartIcon, CommentIcon, ShareIcon, PlayIcon } from '../components/icons';
+import CommentsSheet from '../components/CommentsSheet';
+import ShareSheet from '../components/ShareSheet';
 
 const formatNumber = (num) => {
     if (num >= 1000000) return (num / 1000000).toFixed(1).replace('.0', '') + 'M';
@@ -8,8 +10,7 @@ const formatNumber = (num) => {
     return num.toString();
 };
 
-const VideoPlayer = ({ video, isVisible }) => {
-    // FIX: Explicitly type the ref to ensure proper type inference for video element properties and methods.
+const VideoPlayer = ({ video, isVisible, isPausedExternally, onOpenComments, onOpenShare }) => {
     const videoRef = useRef<HTMLVideoElement>(null);
     const [isPlaying, setIsPlaying] = useState(false);
     const [isLiked, setIsLiked] = useState(false);
@@ -17,6 +18,14 @@ const VideoPlayer = ({ video, isVisible }) => {
     useEffect(() => {
         const videoElement = videoRef.current;
         if (!videoElement) return;
+
+        if (isPausedExternally) {
+            if (!videoElement.paused) {
+                videoElement.pause();
+                setIsPlaying(false);
+            }
+            return; 
+        }
 
         if (isVisible) {
             videoElement.play().then(() => {
@@ -30,9 +39,10 @@ const VideoPlayer = ({ video, isVisible }) => {
             videoElement.currentTime = 0;
             setIsPlaying(false);
         }
-    }, [isVisible]);
+    }, [isVisible, isPausedExternally]);
 
     const handleVideoPress = () => {
+        if (isPausedExternally) return; 
         const videoElement = videoRef.current;
         if (!videoElement) return;
 
@@ -49,6 +59,16 @@ const VideoPlayer = ({ video, isVisible }) => {
         e.stopPropagation();
         setIsLiked(prev => !prev);
     }
+    
+    const handleCommentPress = (e) => {
+        e.stopPropagation();
+        onOpenComments(video.id);
+    };
+    
+    const handleSharePress = (e) => {
+        e.stopPropagation();
+        onOpenShare(video.id);
+    };
 
     return (
         <div className="h-full w-full relative snap-start" onClick={handleVideoPress}>
@@ -77,11 +97,11 @@ const VideoPlayer = ({ video, isVisible }) => {
                     </div>
                     <span className="text-sm font-bold mt-1">{formatNumber(video.likes + (isLiked ? 1 : 0))}</span>
                 </button>
-                <button className="flex flex-col items-center" onClick={(e) => e.stopPropagation()} aria-label="Comment on video">
+                <button className="flex flex-col items-center" onClick={handleCommentPress} aria-label="Comment on video">
                     <CommentIcon />
                     <span className="text-sm font-bold mt-1">{formatNumber(video.comments)}</span>
                 </button>
-                <button className="flex flex-col items-center" onClick={(e) => e.stopPropagation()} aria-label="Share video">
+                <button className="flex flex-col items-center" onClick={handleSharePress} aria-label="Share video">
                     <ShareIcon />
                     <span className="text-sm font-bold mt-1">{formatNumber(video.shares)}</span>
                 </button>
@@ -100,8 +120,10 @@ const VideoPlayer = ({ video, isVisible }) => {
 
 
 const FeedScreen = () => {
+    const [videos, setVideos] = useState(initialVideos);
     const [currentVideoIndex, setCurrentVideoIndex] = useState(0);
-    // FIX: Explicitly type the ref to ensure proper type inference for DOM element children, resolving errors with IntersectionObserver.
+    const [activeCommentsVideoId, setActiveCommentsVideoId] = useState<number | null>(null);
+    const [activeShareVideoId, setActiveShareVideoId] = useState<number | null>(null);
     const containerRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
@@ -117,10 +139,10 @@ const FeedScreen = () => {
             { threshold: 0.7 }
         );
 
-        // FIX: Add a null check for containerRef.current and handle its children safely to resolve type errors with IntersectionObserver.
         const container = containerRef.current;
         if (container) {
-            const videoElements = Array.from(container.children);
+            // FIX: Use querySelectorAll to get a strongly-typed list of elements. This fixes an issue where elements were being inferred as type 'unknown'.
+            const videoElements = container.querySelectorAll('[data-index]');
             videoElements.forEach(el => observer.observe(el));
 
             return () => {
@@ -129,13 +151,61 @@ const FeedScreen = () => {
         }
     }, []);
 
+    const handleOpenComments = (videoId: number) => {
+        setActiveCommentsVideoId(videoId);
+    };
+    
+    const handleCloseComments = () => {
+        setActiveCommentsVideoId(null);
+    };
+
+    const handleOpenShare = (videoId: number) => {
+        setActiveShareVideoId(videoId);
+    };
+
+    const handleCloseShare = () => {
+        setActiveShareVideoId(null);
+    };
+    
+    const handleAddComment = (videoId: number) => {
+        setVideos(currentVideos => 
+            currentVideos.map(video => 
+                video.id === videoId ? { ...video, comments: video.comments + 1 } : video
+            )
+        );
+    };
+
+    const videoForComments = videos.find(v => v.id === activeCommentsVideoId);
+    const videoForShare = videos.find(v => v.id === activeShareVideoId);
+
     return (
-        <div ref={containerRef} className="h-screen w-full snap-y snap-mandatory overflow-y-scroll scroll-smooth">
-            {videos.map((video, index) => (
-                <div key={video.id} data-index={index} className="h-full w-full flex-shrink-0">
-                    <VideoPlayer video={video} isVisible={index === currentVideoIndex} />
-                </div>
-            ))}
+        <div className="h-screen w-full">
+            <div ref={containerRef} className="h-full w-full snap-y snap-mandatory overflow-y-scroll scroll-smooth">
+                {videos.map((video, index) => (
+                    <div key={video.id} data-index={index} className="h-full w-full flex-shrink-0">
+                        <VideoPlayer 
+                          video={video} 
+                          isVisible={index === currentVideoIndex}
+                          isPausedExternally={activeCommentsVideoId !== null || activeShareVideoId !== null}
+                          onOpenComments={handleOpenComments}
+                          onOpenShare={handleOpenShare}
+                        />
+                    </div>
+                ))}
+            </div>
+            {videoForComments && (
+                <CommentsSheet 
+                    video={videoForComments} 
+                    onClose={handleCloseComments} 
+                    onAddComment={handleAddComment}
+                />
+            )}
+            {videoForShare && (
+                <ShareSheet 
+                    video={videoForShare}
+                    onClose={handleCloseShare}
+                />
+            )}
         </div>
     );
 };

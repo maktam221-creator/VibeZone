@@ -69,7 +69,7 @@ const saveDb = (db: Database) => {
   });
 
   // Smart Media Archiving to prevent localStorage quota errors from large thumbnail data URLs
-  const MAX_MEDIA_POSTS = 0; // Keep 0 posts' full data in localStorage to guarantee no quota errors
+  const MAX_MEDIA_POSTS = 5; // Keep 5 posts' full data in localStorage
   if(dbToSave.posts.length > MAX_MEDIA_POSTS) {
     const postsToArchive = dbToSave.posts
       .sort((a: VideoPost, b: VideoPost) => getDateFromPostId(b.id).getTime() - getDateFromPostId(a.id).getTime())

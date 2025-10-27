@@ -1,6 +1,3 @@
-
-
-
 import React, { useState, useEffect, useRef } from 'react';
 import type { VideoPost, Screen, User, FeedTab } from '../types';
 import { HeartIcon, CommentIcon, ShareIcon, MusicIcon, PlayIcon, MuteIcon, UnmuteIcon, ChevronLeftIcon, PlusIcon, CheckIcon, DiscoverIcon } from '../components/icons';
@@ -50,9 +47,10 @@ const VideoPostComponent: React.FC<VideoPostProps> = ({
     onIncrementView,
 }) => {
   const isImagePost = post.mimeType ? post.mimeType.startsWith('image/') : post.videoUrl.startsWith('data:image/');
+  const isArchived = post.videoUrl.startsWith('archived:');
   const [isPlaying, setIsPlaying] = useState(false);
   const [isMuted, setIsMuted] = useState(true);
-  const [isPlayable, setIsPlayable] = useState(!!post.videoUrl && !isImagePost);
+  const [isPlayable, setIsPlayable] = useState(!!post.videoUrl && !isImagePost && !isArchived);
   const [progress, setProgress] = useState(0);
   const [duration, setDuration] = useState(0);
   const [currentTime, setCurrentTime] = useState(0);
@@ -183,7 +181,7 @@ const VideoPostComponent: React.FC<VideoPostProps> = ({
       setIsPlaying(false);
     };
 
-    setIsPlayable(!!post.videoUrl && !isImagePost);
+    setIsPlayable(!!post.videoUrl && !isImagePost && !isArchived);
     video.addEventListener('timeupdate', handleTimeUpdate);
     video.addEventListener('loadedmetadata', handleLoadedMetadata);
     video.addEventListener('error', handleError);
@@ -193,7 +191,7 @@ const VideoPostComponent: React.FC<VideoPostProps> = ({
       video.removeEventListener('loadedmetadata', handleLoadedMetadata);
       video.removeEventListener('error', handleError);
     };
-  }, [post.videoUrl, isImagePost]);
+  }, [post.videoUrl, isImagePost, isArchived]);
 
   const handleContainerClick = () => {
     if (isPlayable) {
@@ -251,7 +249,7 @@ const VideoPostComponent: React.FC<VideoPostProps> = ({
       ) : (
         <video
           ref={videoRef}
-          src={post.videoUrl}
+          src={isPlayable ? post.videoUrl : undefined}
           loop
           playsInline
           muted={isMuted}
@@ -261,9 +259,13 @@ const VideoPostComponent: React.FC<VideoPostProps> = ({
       
       {!isPlayable && !isImagePost && (
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/60 text-white text-center p-4 z-10">
-            {post.thumbnailUrl && <img src={post.thumbnailUrl} alt={post.caption} className="absolute inset-0 w-full h-full object-cover opacity-20 -z-10" />}
-            <p className="text-lg font-semibold">لا يمكن تشغيل الفيديو</p>
-            <p className="text-sm text-gray-300 mt-1">قد يكون الفيديو الذي تم تحميله لم يعد متاحًا.</p>
+            {post.thumbnailUrl && !post.thumbnailUrl.startsWith('archived:') && <img src={post.thumbnailUrl} alt={post.caption} className="absolute inset-0 w-full h-full object-cover opacity-20 -z-10" />}
+            <p className="text-lg font-semibold">{isArchived ? 'تمت أرشفة الوسائط' : 'لا يمكن تشغيل الفيديو'}</p>
+            <p className="text-sm text-gray-300 mt-1">
+                {isArchived
+                    ? 'تمت أرشفة هذا المحتوى القديم تلقائيًا لتوفير المساحة.'
+                    : 'قد يكون الفيديو الذي تم تحميله لم يعد متاحًا.'}
+            </p>
         </div>
       )}
 

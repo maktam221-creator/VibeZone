@@ -1,1 +1,1 @@
-// This file is intentionally left blank in the simplified version of the app.
+// This component is intended to be a reusable header for different screens, potentially displaying titles, back buttons, or actions.

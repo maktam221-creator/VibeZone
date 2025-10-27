@@ -1,1 +1,1 @@
-// This file is intentionally left blank in the simplified version of the app.
+// This screen will display the public profile of another user, showing their videos and information.

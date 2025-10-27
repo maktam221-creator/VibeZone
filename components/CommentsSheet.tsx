@@ -1,8 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { CloseIcon } from './icons';
+import type { Video, Comment } from '../types';
 
-const CommentsSheet = ({ video, onClose, onAddComment }) => {
-    const [comments, setComments] = useState(video.commentsList || []);
+interface CommentsSheetProps {
+    video: Video;
+    onClose: () => void;
+    onAddComment: (videoId: number) => void;
+}
+
+const CommentsSheet = ({ video, onClose, onAddComment }: CommentsSheetProps) => {
+    const [comments, setComments] = useState<Comment[]>(video.commentsList || []);
     const [newComment, setNewComment] = useState('');
 
     useEffect(() => {
@@ -12,10 +19,10 @@ const CommentsSheet = ({ video, onClose, onAddComment }) => {
         };
     }, []);
 
-    const handleSubmit = (e) => {
+    const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         if (newComment.trim()) {
-            const newCommentObj = {
+            const newCommentObj: Comment = {
                 id: Date.now(),
                 user: '@مستخدم_جديد',
                 avatar: 'https://i.pravatar.cc/150?u=a042581f4e29026704d',

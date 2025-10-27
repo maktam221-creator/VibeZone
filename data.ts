@@ -1,4 +1,6 @@
-export const videos = [
+import type { Video } from './types';
+
+export const videos: Video[] = [
   {
     id: 1,
     user: {

@@ -1,14 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import { CloseIcon, CopyIcon, WhatsAppIcon, TwitterIcon, MessengerIcon } from './icons';
+import type { Video } from '../types';
 
-const ShareOption = ({ icon, label, onClick }) => (
+const ShareOption = ({ icon, label, onClick }: { icon: React.ReactNode; label: string; onClick: () => void; }) => (
     <button onClick={onClick} className="flex flex-col items-center space-y-2 text-white hover:text-rose-400 transition-colors">
         <div className="w-14 h-14 bg-gray-700 rounded-full flex items-center justify-center">{icon}</div>
         <span className="text-xs text-gray-300">{label}</span>
     </button>
 );
 
-const ShareSheet = ({ video, onClose }) => {
+interface ShareSheetProps {
+    video: Video;
+    onClose: () => void;
+}
+
+const ShareSheet = ({ video, onClose }: ShareSheetProps) => {
     const [copied, setCopied] = useState(false);
 
     useEffect(() => {

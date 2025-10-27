@@ -1,1 +1,1 @@
-// This file is intentionally left blank in the simplified version of the app.
+// This component will render a single chat message, distinguishing between user messages and bot/other user messages.

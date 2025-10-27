@@ -3,14 +3,23 @@ import { videos as initialVideos } from '../data';
 import { HeartIcon, CommentIcon, ShareIcon, PlayIcon } from '../components/icons';
 import CommentsSheet from '../components/CommentsSheet';
 import ShareSheet from '../components/ShareSheet';
+import type { Video } from '../types';
 
-const formatNumber = (num) => {
+const formatNumber = (num: number) => {
     if (num >= 1000000) return (num / 1000000).toFixed(1).replace('.0', '') + 'M';
     if (num >= 1000) return (num / 1000).toFixed(1).replace('.0', '') + 'K';
     return num.toString();
 };
 
-const VideoPlayer = ({ video, isVisible, isPausedExternally, onOpenComments, onOpenShare }) => {
+interface VideoPlayerProps {
+    video: Video;
+    isVisible: boolean;
+    isPausedExternally: boolean;
+    onOpenComments: (videoId: number) => void;
+    onOpenShare: (videoId: number) => void;
+}
+
+const VideoPlayer = ({ video, isVisible, isPausedExternally, onOpenComments, onOpenShare }: VideoPlayerProps) => {
     const videoRef = useRef<HTMLVideoElement>(null);
     const [isPlaying, setIsPlaying] = useState(false);
     const [isLiked, setIsLiked] = useState(false);
@@ -55,17 +64,17 @@ const VideoPlayer = ({ video, isVisible, isPausedExternally, onOpenComments, onO
         }
     };
     
-    const handleLikePress = (e) => {
+    const handleLikePress = (e: React.MouseEvent) => {
         e.stopPropagation();
         setIsLiked(prev => !prev);
     }
     
-    const handleCommentPress = (e) => {
+    const handleCommentPress = (e: React.MouseEvent) => {
         e.stopPropagation();
         onOpenComments(video.id);
     };
     
-    const handleSharePress = (e) => {
+    const handleSharePress = (e: React.MouseEvent) => {
         e.stopPropagation();
         onOpenShare(video.id);
     };
@@ -120,7 +129,7 @@ const VideoPlayer = ({ video, isVisible, isPausedExternally, onOpenComments, onO
 
 
 const FeedScreen = () => {
-    const [videos, setVideos] = useState(initialVideos);
+    const [videos, setVideos] = useState<Video[]>(initialVideos);
     const [currentVideoIndex, setCurrentVideoIndex] = useState(0);
     const [activeCommentsVideoId, setActiveCommentsVideoId] = useState<number | null>(null);
     const [activeShareVideoId, setActiveShareVideoId] = useState<number | null>(null);
@@ -141,7 +150,7 @@ const FeedScreen = () => {
 
         const container = containerRef.current;
         if (container) {
-            // FIX: Use querySelectorAll to get a strongly-typed list of elements. This fixes an issue where elements were being inferred as type 'unknown'.
+            // FIX: Use forEach directly on the NodeList from querySelectorAll to avoid type inference issues.
             const videoElements = container.querySelectorAll('[data-index]');
             videoElements.forEach(el => observer.observe(el));
 

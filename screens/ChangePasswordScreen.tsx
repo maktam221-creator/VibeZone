@@ -1,1 +1,1 @@
-// This file is intentionally left blank in the simplified version of the app.
+// This screen provides a form for users to change their account password.

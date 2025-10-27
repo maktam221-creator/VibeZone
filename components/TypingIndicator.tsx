@@ -1,1 +1,1 @@
-// This file is intentionally left blank in the simplified version of the app.
+// This component will display an animation to indicate when the other party in a chat is typing.

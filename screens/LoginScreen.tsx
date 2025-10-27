@@ -1,1 +1,1 @@
-// This file is intentionally left blank in the simplified version of the app.
+// This screen will handle user authentication, including login and registration forms.

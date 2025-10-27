@@ -1,1 +1,1 @@
-// This file is intentionally left blank in the simplified version of the app.
+// A generic placeholder screen component for features that are not yet implemented.

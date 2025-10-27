@@ -1,1 +1,1 @@
-// This file is intentionally left blank in the simplified version of the app.
+// This screen would allow users to customize the theme or appearance of their chats.

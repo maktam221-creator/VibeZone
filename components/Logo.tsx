@@ -1,1 +1,1 @@
-// This file is intentionally left blank in the simplified version of the app.
+// This component is reserved for the application's logo, to be used in headers or splash screens.

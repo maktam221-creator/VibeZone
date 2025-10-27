@@ -1,5 +1,15 @@
 import type { User, VideoPost, Comment, DirectMessage, Notification, ConversationPreview, NotificationType } from '../types';
 
+// --- Helper Functions ---
+const getDateFromPostId = (id: string): Date => {
+    // ID format is "video-ISO_DATE_STRING"
+    const dateString = id.substring(id.indexOf('-') + 1);
+    const date = new Date(dateString);
+    // Return a valid but old date if parsing fails, so it doesn't crash sorting
+    return isNaN(date.getTime()) ? new Date(0) : date;
+};
+
+
 // --- Database Simulation ---
 const DB_KEY = 'vibezone_db';
 
@@ -62,7 +72,7 @@ const saveDb = (db: Database) => {
   const MAX_MEDIA_POSTS = 5;
   if(dbToSave.posts.length > MAX_MEDIA_POSTS) {
     const postsToArchive = dbToSave.posts
-      .sort((a: VideoPost, b: VideoPost) => new Date(b.id.split('-')[1]).getTime() - new Date(a.id.split('-')[1]).getTime())
+      .sort((a: VideoPost, b: VideoPost) => getDateFromPostId(b.id).getTime() - getDateFromPostId(a.id).getTime())
       .slice(MAX_MEDIA_POSTS);
 
     for(const post of postsToArchive) {
@@ -182,21 +192,35 @@ export const api = {
             }
         });
         
-        const { password: _p1, ...artUserPublic } = db.users.find(u => u.id === 'user-fallback-1')!;
-        const { password: _p2, ...coffeeUserPublic } = db.users.find(u => u.id === 'user-fallback-2')!;
-        const { password: _p3, ...travelUserPublic } = db.users.find(u => u.id === 'user-fallback-3')!;
-        const { password: _p4, ...foodieUserPublic } = db.users.find(u => u.id === 'user-fallback-4')!;
-        const { password: _p5, ...techUserPublic } = db.users.find(u => u.id === 'user-fallback-5')!;
+        // Robustly find users and prepare them for post creation
+        const userMap: { [key: string]: User } = {};
+        const requiredUserIds = ['user-fallback-1', 'user-fallback-2', 'user-fallback-3', 'user-fallback-4', 'user-fallback-5'];
+        let allUsersFound = true;
+        
+        for (const userId of requiredUserIds) {
+            const user = db.users.find(u => u.id === userId);
+            if (!user) {
+                console.error(`Critical error: fallback user '${userId}' not found during initialization.`);
+                allUsersFound = false;
+                break;
+            }
+            const { password, ...publicUser } = user;
+            userMap[userId] = publicUser;
+        }
 
-        const fallbackPosts: VideoPost[] = [
-            { id: `video-${new Date(Date.now() - 10000).toISOString()}`, user: artUserPublic, videoUrl: 'https://videos.pexels.com/video-files/4784098/4784098-hd_720_1366_25fps.mp4', thumbnailUrl: 'https://images.pexels.com/videos/4784098/pexels-photo-4784098.jpeg?auto=compress&cs=tinysrgb&dpr=1&w=500', mimeType: 'video/mp4', caption: 'السكينة على الشاطئ... 🌊✨ #بحر #غروب #هدوء', songName: 'Sunset Vibes - Chillwave', likes: 12500, commentsCount: 340, shares: 850 },
-            { id: `video-${new Date(Date.now() - 20000).toISOString()}`, user: coffeeUserPublic, videoUrl: 'https://videos.pexels.com/video-files/5495833/5495833-hd_720_1366_24fps.mp4', thumbnailUrl: 'https://images.pexels.com/videos/5495833/pexels-photo-5495833.jpeg?auto=compress&cs=tinysrgb&dpr=1&w=500', mimeType: 'video/mp4', caption: 'أضواء المدينة لا تنام. 🌃 #مدينة #ليل #استكشاف', songName: 'Night Drive - Synthwave', likes: 89000, commentsCount: 1200, shares: 1500 },
-            { id: `video-${new Date(Date.now() - 30000).toISOString()}`, user: travelUserPublic, videoUrl: 'https://videos.pexels.com/video-files/8053678/8053678-hd_720_1280_25fps.mp4', thumbnailUrl: 'https://images.pexels.com/videos/8053678/pexels-photo-8053678.jpeg?auto=compress&cs=tinysrgb&dpr=1&w=500', mimeType: 'video/mp4', caption: 'الطبيعة تنادي! 🌲⛰️ #طبيعة #مغامرة #هدوء', songName: 'Into The Wild - Folk', likes: 45200, commentsCount: 780, shares: 950 },
-            { id: `video-${new Date(Date.now() - 40000).toISOString()}`, user: foodieUserPublic, videoUrl: 'https://videos.pexels.com/video-files/7578542/7578542-hd_720_1366_25fps.mp4', thumbnailUrl: 'https://images.pexels.com/videos/7578542/pexels-photo-7578542.jpeg?auto=compress&cs=tinysrgb&dpr=1&w=500', mimeType: 'video/mp4', caption: 'تحضير ألذ باستا 🍝 #طبخ #وصفات #أكل', songName: 'Italian Summer - Acoustic', likes: 150000, commentsCount: 2100, shares: 1800 },
-            { id: `video-${new Date(Date.now() - 50000).toISOString()}`, user: techUserPublic, videoUrl: 'https://videos.pexels.com/video-files/5992285/5992285-hd_720_1366_25fps.mp4', thumbnailUrl: 'https://images.pexels.com/videos/5992285/pexels-photo-5992285.jpeg?auto=compress&cs=tinysrgb&dpr=1&w=500', mimeType: 'video/mp4', caption: 'نظرة على المستقبل! 🤖 #تقنية #مستقبل #ابتكار', songName: 'Cyberpunk - Electronic', likes: 73000, commentsCount: 990, shares: 1200 },
-        ];
-
-        db.posts.push(...fallbackPosts);
+        if (allUsersFound) {
+            const fallbackPosts: VideoPost[] = [
+                { id: `video-${new Date(Date.now() - 10000).toISOString()}`, user: userMap['user-fallback-1'], videoUrl: 'https://videos.pexels.com/video-files/4784098/4784098-hd_720_1366_25fps.mp4', thumbnailUrl: 'https://images.pexels.com/videos/4784098/pexels-photo-4784098.jpeg?auto=compress&cs=tinysrgb&dpr=1&w=500', mimeType: 'video/mp4', caption: 'السكينة على الشاطئ... 🌊✨ #بحر #غروب #هدوء', songName: 'Sunset Vibes - Chillwave', likes: 12500, commentsCount: 340, shares: 850 },
+                { id: `video-${new Date(Date.now() - 20000).toISOString()}`, user: userMap['user-fallback-2'], videoUrl: 'https://videos.pexels.com/video-files/5495833/5495833-hd_720_1366_24fps.mp4', thumbnailUrl: 'https://images.pexels.com/videos/5495833/pexels-photo-5495833.jpeg?auto=compress&cs=tinysrgb&dpr=1&w=500', mimeType: 'video/mp4', caption: 'أضواء المدينة لا تنام. 🌃 #مدينة #ليل #استكشاف', songName: 'Night Drive - Synthwave', likes: 89000, commentsCount: 1200, shares: 1500 },
+                { id: `video-${new Date(Date.now() - 30000).toISOString()}`, user: userMap['user-fallback-3'], videoUrl: 'https://videos.pexels.com/video-files/8053678/8053678-hd_720_1280_25fps.mp4', thumbnailUrl: 'https://images.pexels.com/videos/8053678/pexels-photo-8053678.jpeg?auto=compress&cs=tinysrgb&dpr=1&w=500', mimeType: 'video/mp4', caption: 'الطبيعة تنادي! 🌲⛰️ #طبيعة #مغامرة #هدوء', songName: 'Into The Wild - Folk', likes: 45200, commentsCount: 780, shares: 950 },
+                { id: `video-${new Date(Date.now() - 40000).toISOString()}`, user: userMap['user-fallback-4'], videoUrl: 'https://videos.pexels.com/video-files/7578542/7578542-hd_720_1366_25fps.mp4', thumbnailUrl: 'https://images.pexels.com/videos/7578542/pexels-photo-7578542.jpeg?auto=compress&cs=tinysrgb&dpr=1&w=500', mimeType: 'video/mp4', caption: 'تحضير ألذ باستا 🍝 #طبخ #وصفات #أكل', songName: 'Italian Summer - Acoustic', likes: 150000, commentsCount: 2100, shares: 1800 },
+                { id: `video-${new Date(Date.now() - 50000).toISOString()}`, user: userMap['user-fallback-5'], videoUrl: 'https://videos.pexels.com/video-files/5992285/5992285-hd_720_1366_25fps.mp4', thumbnailUrl: 'https://images.pexels.com/videos/5992285/pexels-photo-5992285.jpeg?auto=compress&cs=tinysrgb&dpr=1&w=500', mimeType: 'video/mp4', caption: 'نظرة على المستقبل! 🤖 #تقنية #مستقبل #ابتكار', songName: 'Cyberpunk - Electronic', likes: 73000, commentsCount: 990, shares: 1200 },
+            ];
+            db.posts.push(...fallbackPosts);
+        } else {
+            // Avoid creating posts if users are missing to prevent crashes.
+            console.warn("Skipping post generation due to missing fallback users.");
+        }
     }
 
     const streamerExists = db.users.some(u => u.id === 'user-streamer-1');
@@ -461,13 +485,13 @@ export const api = {
 
     return db.posts
         .filter(p => followedUsernames.has(p.user.username))
-        .sort((a, b) => new Date(b.id.split('-')[1]).getTime() - new Date(a.id.split('-')[1]).getTime());
+        .sort((a, b) => getDateFromPostId(b.id).getTime() - getDateFromPostId(a.id).getTime());
   },
   
   getUserPosts(userId: string): VideoPost[] {
     const db = getDb();
     return db.posts.filter(p => p.user.id === userId)
-        .sort((a, b) => new Date(b.id.split('-')[1]).getTime() - new Date(a.id.split('-')[1]).getTime());
+        .sort((a, b) => getDateFromPostId(b.id).getTime() - getDateFromPostId(a.id).getTime());
   },
   
   getLikedPosts(): VideoPost[] {
@@ -476,7 +500,7 @@ export const api = {
       const db = getDb();
       const likedPostIds = new Set(db.likes.filter(l => l.userId === userId).map(l => l.postId));
       return db.posts.filter(p => likedPostIds.has(p.id))
-          .sort((a, b) => new Date(b.id.split('-')[1]).getTime() - new Date(a.id.split('-')[1]).getTime());
+          .sort((a, b) => getDateFromPostId(b.id).getTime() - getDateFromPostId(a.id).getTime());
   },
   
   getPostById(postId: string): VideoPost | undefined {

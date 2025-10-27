@@ -1,13 +1,7 @@
 import React from 'react';
 import { HomeIcon, DiscoverIcon, CreateIcon, InboxIcon, ProfileIcon } from './icons';
 
-type NavItemProps = {
-  label: string;
-  icon: React.ReactNode;
-  active?: boolean;
-};
-
-const NavItem: React.FC<NavItemProps> = ({ label, icon, active = false }) => (
+const NavItem = ({ label, icon, active = false }) => (
   <button className="flex flex-col items-center justify-center text-xs space-y-1 flex-1">
     <div className={`${active ? 'text-white' : 'text-gray-400'}`}>{icon}</div>
     <span className={`font-bold ${active ? 'text-white' : 'text-gray-400'}`}>{label}</span>
@@ -15,7 +9,7 @@ const NavItem: React.FC<NavItemProps> = ({ label, icon, active = false }) => (
 );
 
 
-const BottomNav: React.FC = () => {
+const BottomNav = () => {
   return (
     <div className="fixed bottom-0 left-0 right-0 h-20 bg-black flex items-center justify-around z-50 px-2">
       <NavItem label="الرئيسية" icon={<HomeIcon />} active={true} />

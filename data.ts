@@ -1,18 +1,4 @@
-export interface Video {
-  id: number;
-  user: {
-    name: string;
-    avatar: string;
-  };
-  src: string;
-  poster: string;
-  caption: string;
-  likes: number;
-  comments: number;
-  shares: number;
-}
-
-export const videos: Video[] = [
+export const videos = [
   {
     id: 1,
     user: {

@@ -2,7 +2,7 @@ import React, { useEffect } from 'react';
 import FeedScreen from './screens/FeedScreen';
 import BottomNav from './components/BottomNav';
 
-const App: React.FC = () => {
+const App = () => {
     useEffect(() => {
         const root = window.document.documentElement;
         if (!root.classList.contains('dark')) {

@@ -1,15 +1,15 @@
 import React, { useRef, useEffect, useState } from 'react';
 import { videos } from '../data';
-import type { Video } from '../data';
 import { HeartIcon, CommentIcon, ShareIcon, PlayIcon } from '../components/icons';
 
-const formatNumber = (num: number) => {
+const formatNumber = (num) => {
     if (num >= 1000000) return (num / 1000000).toFixed(1).replace('.0', '') + 'M';
     if (num >= 1000) return (num / 1000).toFixed(1).replace('.0', '') + 'K';
     return num.toString();
 };
 
-const VideoPlayer: React.FC<{ video: Video, isVisible: boolean }> = ({ video, isVisible }) => {
+const VideoPlayer = ({ video, isVisible }) => {
+    // FIX: Explicitly type the ref to ensure proper type inference for video element properties and methods.
     const videoRef = useRef<HTMLVideoElement>(null);
     const [isPlaying, setIsPlaying] = useState(false);
     const [isLiked, setIsLiked] = useState(false);
@@ -45,7 +45,7 @@ const VideoPlayer: React.FC<{ video: Video, isVisible: boolean }> = ({ video, is
         }
     };
     
-    const handleLikePress = (e: React.MouseEvent<HTMLButtonElement, MouseEvent>) => {
+    const handleLikePress = (e) => {
         e.stopPropagation();
         setIsLiked(prev => !prev);
     }
@@ -99,8 +99,9 @@ const VideoPlayer: React.FC<{ video: Video, isVisible: boolean }> = ({ video, is
 };
 
 
-const FeedScreen: React.FC = () => {
+const FeedScreen = () => {
     const [currentVideoIndex, setCurrentVideoIndex] = useState(0);
+    // FIX: Explicitly type the ref to ensure proper type inference for DOM element children, resolving errors with IntersectionObserver.
     const containerRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
@@ -117,12 +118,10 @@ const FeedScreen: React.FC = () => {
         );
 
         const videoElements = Array.from(containerRef.current?.children || []);
-        // FIX: Cast `el` to Element as its type was inferred as `unknown`.
-        videoElements.forEach(el => observer.observe(el as Element));
+        videoElements.forEach(el => observer.observe(el));
 
         return () => {
-             // FIX: Cast `el` to Element as its type was inferred as `unknown`.
-             videoElements.forEach(el => observer.unobserve(el as Element));
+             videoElements.forEach(el => observer.unobserve(el));
         };
     }, []);
 

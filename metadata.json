@@ -1,5 +1,8 @@
 {
   "name": "VibeZone | فايب زون",
   "description": "تطبيق اجتماعي لمشاركة مقاطع الفيديو القصيرة والبث المباشر. اكتشف المحتوى الرائج وتواصل مع الآخرين.",
-  "requestFramePermissions": []
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ]
 }

@@ -1,39 +1,84 @@
 import React from 'react';
-import { HomeIcon, DiscoverIcon, CreateIcon, InboxIcon, ProfileIcon } from './icons';
+import { View, TouchableOpacity, Text, StyleSheet, SafeAreaView } from 'react-native';
+import { Screen } from '../App';
 
-const BottomNav = () => {
-  const navItems = [
-    { icon: <HomeIcon />, label: 'Home' },
-    { icon: <DiscoverIcon />, label: 'Discover' },
-    { icon: <CreateIcon className="bg-white text-black" />, label: 'Create' },
-    { icon: <InboxIcon />, label: 'Inbox' },
-    { icon: <ProfileIcon />, label: 'Profile' },
+interface BottomNavProps {
+  activeScreen: Screen;
+  setActiveScreen: (screen: Screen) => void;
+}
+
+const BottomNav: React.FC<BottomNavProps> = ({ activeScreen, setActiveScreen }) => {
+  const navItems: { name: Screen, icon: string }[] = [
+    { name: 'Home', icon: '🏠' },
+    { name: 'Discover', icon: '🔍' },
+    { name: 'Create', icon: '➕' },
+    { name: 'Profile', icon: '👤' },
   ];
 
   return (
-    <div className="absolute bottom-0 left-0 right-0 h-16 bg-black flex justify-around items-center z-20">
-      {navItems.map((item, index) => (
-        <button key={index} className="flex flex-col items-center justify-center text-xs font-semibold text-gray-400">
-          {item.label === 'Create' ? (
-             <div className="w-12 h-8 rounded-lg flex items-center justify-center bg-gradient-to-r from-cyan-400 to-pink-500 p-0.5">
-                <div className="bg-white w-full h-full rounded-md flex items-center justify-center">
-                    <CreateIcon className="text-black" />
-                </div>
-            </div>
-          ) : (
-            <>
-              <div className={item.label === 'Home' ? 'text-white' : ''}>
-                {item.icon}
-              </div>
-              <span className={`mt-1 ${item.label === 'Home' ? 'text-white' : ''}`}>
-                {item.label}
-              </span>
-            </>
-          )}
-        </button>
-      ))}
-    </div>
+    <SafeAreaView style={styles.safeArea}>
+      <View style={styles.container}>
+        {navItems.map((item) => (
+          <TouchableOpacity
+            key={item.name}
+            style={styles.navItem}
+            onPress={() => setActiveScreen(item.name)}
+          >
+            <Text style={[
+                styles.icon, 
+                item.name === 'Create' && styles.createIcon,
+                activeScreen === item.name && styles.activeIcon,
+                activeScreen === item.name && item.name === 'Create' && styles.activeCreateIcon,
+              ]}>
+              {item.icon}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+    </SafeAreaView>
   );
 };
+
+const styles = StyleSheet.create({
+  safeArea: {
+    backgroundColor: '#000',
+    borderTopWidth: 1,
+    borderTopColor: '#222',
+  },
+  container: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    alignItems: 'center',
+    height: 60,
+  },
+  navItem: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  icon: {
+    fontSize: 26,
+    color: '#888',
+  },
+  activeIcon: {
+     transform: [{ scale: 1.1 }],
+     color: '#FFF',
+  },
+  createIcon: {
+    fontSize: 30,
+    backgroundColor: '#FFF',
+    color: '#000',
+    width: 50,
+    height: 35,
+    borderRadius: 8,
+    textAlign: 'center',
+    lineHeight: 35,
+    overflow: 'hidden'
+  },
+  activeCreateIcon: {
+    backgroundColor: '#FF6B35',
+    color: '#FFF',
+  }
+});
 
 export default BottomNav;

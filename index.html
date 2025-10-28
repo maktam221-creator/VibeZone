@@ -1,41 +1,34 @@
 <!DOCTYPE html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Short Story</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Add Babel to transpile JSX in the browser -->
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<html lang="ar">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Short Story App</title>
   <script type="importmap">
-{
-  "imports": {
-    "@google/genai": "https://aistudiocdn.com/@google/genai@^1.26.0",
-    "react": "https://aistudiocdn.com/react@^18.2.0",
-    "react-dom/client": "https://aistudiocdn.com/react-dom@^18.2.0/client",
-    "react/": "https://aistudiocdn.com/react@^18.2.0/",
-    "react-dom/": "https://aistudiocdn.com/react-dom@^18.2.0/"
+  {
+    "imports": {
+      "react": "https://aistudiocdn.com/react@^19.2.0",
+      "react-native": "https://aistudiocdn.com/react-native@^0.82.1",
+      "react-native-video": "https://aistudiocdn.com/react-native-video@^6.17.0",
+      "react/": "https://aistudiocdn.com/react@^19.2.0/"
+    }
   }
-}
-</script>
-<style>
-  body {
-    background-color: #000;
-    color: #fff;
-    margin: 0;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-  }
-  /* Hide scrollbar */
-  ::-webkit-scrollbar {
-    display: none;
-  }
-  -ms-overflow-style: none;  /* IE and Edge */
-  scrollbar-width: none;  /* Firefox */
-</style>
+  </script>
+  <style>
+    body, html, #root {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      width: 100%;
+      overflow: hidden;
+      background-color: #000;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+  </style>
 </head>
-  <body>
-    <div id="root"></div>
-    <!-- Configure Babel to transpile both React (JSX) and TypeScript -->
-    <script type="text/babel" data-type="module" data-presets="react,typescript" src="./index.tsx"></script>
-  </body>
+<body>
+  <div id="root"></div>
+  <script type="module" src="/index.tsx"></script>
+</body>
 </html>

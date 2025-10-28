@@ -1,24 +1,37 @@
 import React from 'react';
 import { HomeIcon, DiscoverIcon, CreateIcon, InboxIcon, ProfileIcon } from './icons';
 
-const NavItem = ({ label, icon, active = false, onClick }) => (
-  <button onClick={onClick} className="flex flex-col items-center justify-center text-xs space-y-1 flex-1" aria-label={label}>
-    <div className={`${active ? 'text-white' : 'text-gray-400'}`}>{icon}</div>
-    <span className={`font-bold ${active ? 'text-white' : 'text-gray-400'}`}>{label}</span>
-  </button>
-);
+const BottomNav = () => {
+  const navItems = [
+    { icon: <HomeIcon />, label: 'Home' },
+    { icon: <DiscoverIcon />, label: 'Discover' },
+    { icon: <CreateIcon className="bg-white text-black" />, label: 'Create' },
+    { icon: <InboxIcon />, label: 'Inbox' },
+    { icon: <ProfileIcon />, label: 'Profile' },
+  ];
 
-
-const BottomNav = ({ activeScreen, onNavigate }) => {
   return (
-    <div className="fixed bottom-0 left-0 right-0 h-20 bg-black/80 backdrop-blur-sm flex items-center justify-around z-50 px-2 border-t border-gray-800">
-      <NavItem label="الرئيسية" icon={<HomeIcon />} active={activeScreen === 'Home'} onClick={() => onNavigate('Home')} />
-      <NavItem label="اكتشف" icon={<DiscoverIcon />} active={activeScreen === 'Discover'} onClick={() => onNavigate('Discover')} />
-      <button onClick={() => onNavigate('Create')} aria-label="إنشاء فيديو جديد">
-        <CreateIcon />
-      </button>
-      <NavItem label="صندوق الوارد" icon={<InboxIcon />} active={activeScreen === 'Inbox'} onClick={() => onNavigate('Inbox')} />
-      <NavItem label="ملفي" icon={<ProfileIcon />} active={activeScreen === 'Profile'} onClick={() => onNavigate('Profile')} />
+    <div className="absolute bottom-0 left-0 right-0 h-16 bg-black flex justify-around items-center z-20">
+      {navItems.map((item, index) => (
+        <button key={index} className="flex flex-col items-center justify-center text-xs font-semibold text-gray-400">
+          {item.label === 'Create' ? (
+             <div className="w-12 h-8 rounded-lg flex items-center justify-center bg-gradient-to-r from-cyan-400 to-pink-500 p-0.5">
+                <div className="bg-white w-full h-full rounded-md flex items-center justify-center">
+                    <CreateIcon className="text-black" />
+                </div>
+            </div>
+          ) : (
+            <>
+              <div className={item.label === 'Home' ? 'text-white' : ''}>
+                {item.icon}
+              </div>
+              <span className={`mt-1 ${item.label === 'Home' ? 'text-white' : ''}`}>
+                {item.label}
+              </span>
+            </>
+          )}
+        </button>
+      ))}
     </div>
   );
 };

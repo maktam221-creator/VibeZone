@@ -1,82 +1,12 @@
 <!DOCTYPE html>
-<html lang="ar" dir="rtl">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>VibeZone | فايب زون</title>
+    <title>Short Story</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap" rel="stylesheet">
-    <script>
-      tailwind.config = {
-        darkMode: 'class', // Enable dark mode using a class
-        theme: {
-          extend: {},
-        },
-      }
-    </script>
     <!-- Add Babel to transpile JSX in the browser -->
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    <style>
-      body {
-        font-family: 'Cairo', sans-serif;
-        overscroll-behavior-y: contain; /* Prevents pull-to-refresh on mobile */
-      }
-      /* Light mode default */
-      body {
-        background-color: #f9fafb; /* gray-50 */
-        color: #111827; /* gray-900 */
-      }
-      /* Dark mode styles */
-      html.dark body {
-        background-color: #000000;
-        color: #ffffff;
-      }
-      @keyframes spin-reverse {
-        from {
-          transform: rotate(360deg);
-        }
-        to {
-          transform: rotate(0deg);
-        }
-      }
-      .animate-spin-reverse {
-        animation: spin-reverse 5s linear infinite;
-      }
-      @keyframes slide-up {
-        from {
-          transform: translateY(100%);
-        }
-        to {
-          transform: translateY(0);
-        }
-      }
-      .animate-slide-up {
-        animation: slide-up 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
-      }
-      @keyframes zoom-in-fade {
-        from {
-          transform: scale(0.9);
-          opacity: 0.5;
-        }
-        to {
-          transform: scale(1);
-          opacity: 1;
-        }
-      }
-      .animate-zoom-in-fade {
-        animation: zoom-in-fade 0.7s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
-      }
-      @keyframes pop {
-        0% { transform: scale(1); }
-        50% { transform: scale(1.3); }
-        100% { transform: scale(1); }
-      }
-      .animate-pop {
-        animation: pop 0.3s ease-out;
-      }
-    </style>
   <script type="importmap">
 {
   "imports": {
@@ -88,6 +18,20 @@
   }
 }
 </script>
+<style>
+  body {
+    background-color: #000;
+    color: #fff;
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  }
+  /* Hide scrollbar */
+  ::-webkit-scrollbar {
+    display: none;
+  }
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+</style>
 </head>
   <body>
     <div id="root"></div>

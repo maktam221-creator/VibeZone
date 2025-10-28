@@ -1,222 +1,115 @@
-import React, { useRef, useEffect, useState } from 'react';
-import { videos as initialVideos } from '../data';
-import { HeartIcon, CommentIcon, ShareIcon, PlayIcon } from '../components/icons';
-import CommentsSheet from '../components/CommentsSheet';
-import ShareSheet from '../components/ShareSheet';
-import type { Video } from '../types';
+import React, { useRef, useEffect } from 'react';
+import { videos } from '../data';
+import { Video } from '../types';
 
-const formatNumber = (num: number) => {
-    if (num >= 1000000) return (num / 1000000).toFixed(1).replace('.0', '') + 'M';
-    if (num >= 1000) return (num / 1000).toFixed(1).replace('.0', '') + 'K';
-    return num.toString();
+const VideoPlayer = ({ video, isVisible }: { video: Video; isVisible: boolean }) => {
+  const videoRef = useRef<HTMLVideoElement>(null);
+
+  useEffect(() => {
+    if (isVisible) {
+      videoRef.current?.play().catch(error => {
+        // Autoplay was prevented.
+        console.log("Autoplay prevented: ", error);
+      });
+    } else {
+      videoRef.current?.pause();
+    }
+  }, [isVisible]);
+
+  return (
+    <div className="relative h-full w-full snap-start flex-shrink-0">
+      <video
+        ref={videoRef}
+        src={video.videoUrl}
+        loop
+        className="h-full w-full object-cover"
+        playsInline // Important for mobile browsers
+        muted // Muted autoplay is usually allowed
+      />
+      <div className="absolute bottom-16 left-0 p-4 text-white z-10 w-full bg-gradient-to-t from-black/50 to-transparent">
+        <div className="flex items-center mb-2">
+            <img src={video.user.avatarUrl} className="w-10 h-10 rounded-full border-2 border-white object-cover" />
+            <p className="font-bold ml-3">@{video.user.username}</p>
+        </div>
+        <p className="text-sm">{video.description}</p>
+      </div>
+      <InteractionBar stats={video.stats} />
+    </div>
+  );
 };
 
-interface VideoPlayerProps {
-    video: Video;
-    isVisible: boolean;
-    isPausedExternally: boolean;
-    onOpenComments: (videoId: number) => void;
-    onOpenShare: (videoId: number) => void;
-}
-
-const VideoPlayer = ({ video, isVisible, isPausedExternally, onOpenComments, onOpenShare }: VideoPlayerProps) => {
-    const videoRef = useRef<HTMLVideoElement>(null);
-    const [isPlaying, setIsPlaying] = useState(false);
-    const [isLiked, setIsLiked] = useState(false);
-
-    useEffect(() => {
-        const videoElement = videoRef.current;
-        if (!videoElement) return;
-
-        if (isPausedExternally) {
-            if (!videoElement.paused) {
-                videoElement.pause();
-                setIsPlaying(false);
-            }
-            return; 
-        }
-
-        if (isVisible) {
-            videoElement.play().then(() => {
-                setIsPlaying(true);
-            }).catch(error => {
-                console.error("Video play failed:", error);
-                setIsPlaying(false);
-            });
-        } else {
-            videoElement.pause();
-            videoElement.currentTime = 0;
-            setIsPlaying(false);
-        }
-    }, [isVisible, isPausedExternally]);
-
-    const handleVideoPress = () => {
-        if (isPausedExternally) return; 
-        const videoElement = videoRef.current;
-        if (!videoElement) return;
-
-        if (isPlaying) {
-            videoElement.pause();
-            setIsPlaying(false);
-        } else {
-            videoElement.play();
-            setIsPlaying(true);
-        }
-    };
+const InteractionBar = ({ stats }: { stats: Video['stats'] }) => {
+    const [liked, setLiked] = React.useState(false);
     
-    const handleLikePress = (e: React.MouseEvent) => {
-        e.stopPropagation();
-        setIsLiked(prev => !prev);
+    const formatCount = (num: number) => {
+        if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
+        if (num >= 1000) return (num / 1000).toFixed(1) + 'K';
+        return num.toString();
     }
     
-    const handleCommentPress = (e: React.MouseEvent) => {
-        e.stopPropagation();
-        onOpenComments(video.id);
-    };
-    
-    const handleSharePress = (e: React.MouseEvent) => {
-        e.stopPropagation();
-        onOpenShare(video.id);
-    };
-
     return (
-        <div className="h-full w-full relative snap-start" onClick={handleVideoPress}>
-            <video
-                ref={videoRef}
-                src={video.src}
-                poster={video.poster}
-                loop
-                muted
-                playsInline
-                className="w-full h-full object-cover"
-                aria-label={`Video by ${video.user.name}: ${video.caption}`}
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"></div>
-            
-            {!isPlaying && (
-                <div className="absolute inset-0 flex items-center justify-center pointer-events-none" aria-hidden="true">
-                    <PlayIcon className="w-20 h-20 text-white/70" />
+        <div className="absolute bottom-20 right-2 flex flex-col items-center space-y-4 z-10">
+            <button className="flex flex-col items-center" onClick={() => setLiked(!liked)}>
+                <div className="w-12 h-12 flex items-center justify-center rounded-full bg-gray-800 bg-opacity-50">
+                    <svg xmlns="http://www.w3.org/2000/svg" className={`w-7 h-7 ${liked ? 'text-red-500' : 'text-white'}`} viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+                    </svg>
                 </div>
-            )}
-
-            <div className="absolute bottom-24 right-2 text-white flex flex-col items-center space-y-6">
-                <button className="flex flex-col items-center" onClick={handleLikePress} aria-label="Like video">
-                    <div className={`transition-transform duration-200 ease-in-out transform ${isLiked ? 'text-red-500 animate-pop' : 'text-white'}`}>
-                        <HeartIcon filled={isLiked}/>
-                    </div>
-                    <span className="text-sm font-bold mt-1">{formatNumber(video.likes + (isLiked ? 1 : 0))}</span>
-                </button>
-                <button className="flex flex-col items-center" onClick={handleCommentPress} aria-label="Comment on video">
-                    <CommentIcon />
-                    <span className="text-sm font-bold mt-1">{formatNumber(video.comments)}</span>
-                </button>
-                <button className="flex flex-col items-center" onClick={handleSharePress} aria-label="Share video">
-                    <ShareIcon />
-                    <span className="text-sm font-bold mt-1">{formatNumber(video.shares)}</span>
-                </button>
-            </div>
-            
-            <div className="absolute bottom-24 left-4 text-white max-w-[calc(100%-80px)]">
-                <div className="flex items-center space-x-2 mb-2">
-                    <img src={video.user.avatar} className="w-10 h-10 rounded-full border-2 border-white" alt={`${video.user.name}'s avatar`} />
-                    <span className="font-bold text-lg">{video.user.name}</span>
+                <span className="text-xs font-semibold mt-1">{formatCount(stats.likes + (liked ? 1 : 0))}</span>
+            </button>
+            <button className="flex flex-col items-center">
+                 <div className="w-12 h-12 flex items-center justify-center rounded-full bg-gray-800 bg-opacity-50">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="w-7 h-7 text-white" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M21.99 4c0-1.1-.89-2-1.99-2H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h14l4 4-.01-18z"/>
+                    </svg>
+                 </div>
+                <span className="text-xs font-semibold mt-1">{formatCount(stats.comments)}</span>
+            </button>
+            <button className="flex flex-col items-center">
+                <div className="w-12 h-12 flex items-center justify-center rounded-full bg-gray-800 bg-opacity-50">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="w-7 h-7 text-white" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.66 1.34 3 3 3s3-1.34 3-3-1.34-3-3-3z"/>
+                    </svg>
                 </div>
-                <p className="text-base leading-relaxed">{video.caption}</p>
-            </div>
+                <span className="text-xs font-semibold mt-1">{formatCount(stats.shares)}</span>
+            </button>
         </div>
     );
-};
-
+}
 
 const FeedScreen = () => {
-    const [videos, setVideos] = useState<Video[]>(initialVideos);
-    const [currentVideoIndex, setCurrentVideoIndex] = useState(0);
-    const [activeCommentsVideoId, setActiveCommentsVideoId] = useState<number | null>(null);
-    const [activeShareVideoId, setActiveShareVideoId] = useState<number | null>(null);
-    const containerRef = useRef<HTMLDivElement>(null);
+  const [visibleVideo, setVisibleVideo] = React.useState<string | null>(videos[0]?.id || null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
-    useEffect(() => {
-        const observer = new IntersectionObserver(
-            (entries) => {
-                entries.forEach((entry) => {
-                    if (entry.isIntersecting) {
-                        const index = parseInt(entry.target.getAttribute('data-index') || '0', 10);
-                        setCurrentVideoIndex(index);
-                    }
-                });
-            },
-            { threshold: 0.7 }
-        );
-
-        const container = containerRef.current;
-        if (container) {
-            // FIX: Use forEach directly on the NodeList from querySelectorAll to avoid type inference issues.
-            const videoElements = container.querySelectorAll('[data-index]');
-            videoElements.forEach(el => observer.observe(el));
-
-            return () => {
-                 videoElements.forEach(el => observer.unobserve(el));
-            };
-        }
-    }, []);
-
-    const handleOpenComments = (videoId: number) => {
-        setActiveCommentsVideoId(videoId);
-    };
-    
-    const handleCloseComments = () => {
-        setActiveCommentsVideoId(null);
-    };
-
-    const handleOpenShare = (videoId: number) => {
-        setActiveShareVideoId(videoId);
-    };
-
-    const handleCloseShare = () => {
-        setActiveShareVideoId(null);
-    };
-    
-    const handleAddComment = (videoId: number) => {
-        setVideos(currentVideos => 
-            currentVideos.map(video => 
-                video.id === videoId ? { ...video, comments: video.comments + 1 } : video
-            )
-        );
-    };
-
-    const videoForComments = videos.find(v => v.id === activeCommentsVideoId);
-    const videoForShare = videos.find(v => v.id === activeShareVideoId);
-
-    return (
-        <div className="h-screen w-full">
-            <div ref={containerRef} className="h-full w-full snap-y snap-mandatory overflow-y-scroll scroll-smooth">
-                {videos.map((video, index) => (
-                    <div key={video.id} data-index={index} className="h-full w-full flex-shrink-0">
-                        <VideoPlayer 
-                          video={video} 
-                          isVisible={index === currentVideoIndex}
-                          isPausedExternally={activeCommentsVideoId !== null || activeShareVideoId !== null}
-                          onOpenComments={handleOpenComments}
-                          onOpenShare={handleOpenShare}
-                        />
-                    </div>
-                ))}
-            </div>
-            {videoForComments && (
-                <CommentsSheet 
-                    video={videoForComments} 
-                    onClose={handleCloseComments} 
-                    onAddComment={handleAddComment}
-                />
-            )}
-            {videoForShare && (
-                <ShareSheet 
-                    video={videoForShare}
-                    onClose={handleCloseShare}
-                />
-            )}
-        </div>
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            setVisibleVideo(entry.target.getAttribute('data-video-id'));
+          }
+        });
+      },
+      { threshold: 0.5 } // 50% of the video must be visible
     );
+
+    const videoElements = containerRef.current?.querySelectorAll('[data-video-id]');
+    videoElements?.forEach((el) => observer.observe(el));
+
+    return () => {
+      videoElements?.forEach((el) => observer.unobserve(el));
+    };
+  }, []);
+
+  return (
+    <div ref={containerRef} className="h-full w-full overflow-y-scroll snap-y snap-mandatory">
+      {videos.map((video) => (
+        <div key={video.id} data-video-id={video.id} className="h-full w-full snap-start flex-shrink-0">
+             <VideoPlayer video={video} isVisible={visibleVideo === video.id} />
+        </div>
+      ))}
+    </div>
+  );
 };
 
 export default FeedScreen;

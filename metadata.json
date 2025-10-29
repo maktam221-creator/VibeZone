@@ -1,4 +1,5 @@
 {
   "name": "New React App",
-  "description": "A new application starting from scratch."
+  "description": "A new application starting from scratch.",
+  "requestFramePermissions": []
 }

@@ -22,7 +22,7 @@ import { DetailModal } from './screens/DetailModal';
 import { auth } from './services/firebase';
 import { ChangePasswordScreen } from './screens/ChangePasswordScreen';
 
-function App() {
+export function App() {
   const [activeScreen, setActiveScreen] = useState<Screen>('feed');
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [currentUser, setCurrentUser] = useState<User>(initialUser);
@@ -453,5 +453,3 @@ function App() {
     </div>
   );
 }
-
-export default App;

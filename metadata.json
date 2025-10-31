@@ -1,5 +1,8 @@
 {
-  "name": "New React App",
-  "description": "A new application starting from scratch.",
-  "requestFramePermissions": []
+  "name": " VibeZone | فايب زون",
+  "description": "تطبيق اجتماعي لمشاركة مقاطع الفيديو القصيرة والبث المباشر. اكتشف المحتوى الرائج وتواصل مع الآخرين.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ]
 }

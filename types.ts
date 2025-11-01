@@ -40,7 +40,7 @@ export interface LiveStream {
   comments?: Comment[];
 }
 
-export type Screen = 'feed' | 'discover' | 'chat' | 'create' | 'live' | 'profile' | 'editProfile' | 'account' | 'privacy' | 'changePassword';
+export type Screen = 'feed' | 'discover' | 'chat' | 'create' | 'live' | 'profile' | 'editProfile' | 'account' | 'privacy' | 'changePassword' | 'generateVideo';
 
 export enum MessageRole {
   USER = 'user',

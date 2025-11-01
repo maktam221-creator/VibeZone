@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { UploadIcon, LiveIcon, ChevronLeftIcon } from '../components/icons';
+import { UploadIcon, LiveIcon, ChevronLeftIcon, SparklesIcon } from '../components/icons';
 import { type User } from '../types';
 import { uploadToCloudinary } from '../services/cloudinaryService';
 
@@ -8,9 +8,10 @@ interface CreateScreenProps {
   addVideoPost: (postData: { caption: string; songName: string; videoUrl: string; thumbnailUrl?: string; }) => void;
   currentUser: User;
   onGoLive: () => void;
+  onGenerateVideo: () => void;
 }
 
-export const CreateScreen: React.FC<CreateScreenProps> = ({ onPostCreated, addVideoPost, currentUser, onGoLive }) => {
+export const CreateScreen: React.FC<CreateScreenProps> = ({ onPostCreated, addVideoPost, currentUser, onGoLive, onGenerateVideo }) => {
   const [mode, setMode] = useState<'choice' | 'upload'>('choice');
   const [caption, setCaption] = useState('');
   const [filePreview, setFilePreview] = useState<string | null>(null);
@@ -172,14 +173,23 @@ export const CreateScreen: React.FC<CreateScreenProps> = ({ onPostCreated, addVi
 
   if (mode === 'choice') {
     return (
-      <div className="flex flex-col h-full bg-black text-white p-4 pb-20 justify-center items-center gap-8">
+      <div className="flex flex-col h-full bg-black text-white p-4 pb-20 justify-center items-center gap-6">
         <h1 className="text-2xl font-bold text-center mb-4">إنشاء محتوى جديد</h1>
+         <button
+          disabled
+          title="هذه الميزة متاحة فقط في بيئة التطوير الخاصة بـ Google AI Studio"
+          className="w-full max-w-sm flex flex-col items-center justify-center p-8 bg-gray-600 rounded-2xl cursor-not-allowed opacity-60"
+        >
+          <SparklesIcon className="w-12 h-12 mb-4" />
+          <span className="text-xl font-bold">إنشاء فيديو بالذكاء الاصطناعي</span>
+          <span className="text-xs mt-2 text-gray-300">(غير متاحة في النسخة المنشورة)</span>
+        </button>
         <button
           onClick={() => setMode('upload')}
           className="w-full max-w-sm flex flex-col items-center justify-center p-8 bg-purple-600 rounded-2xl hover:bg-purple-500 transition-transform transform hover:scale-105"
         >
           <UploadIcon className="w-12 h-12 mb-4" />
-          <span className="text-xl font-bold">تحميل فيديو</span>
+          <span className="text-xl font-bold">تحميل فيديو أو صورة</span>
         </button>
         <button
           onClick={onGoLive}
@@ -254,6 +264,7 @@ export const CreateScreen: React.FC<CreateScreenProps> = ({ onPostCreated, addVi
             {error && (
                 <div className="mt-4 text-center text-red-400 bg-red-900/30 p-3 rounded-lg">
                     <p className="text-sm">{error}</p>
+
                 </div>
             )}
 

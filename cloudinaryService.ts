@@ -1,19 +1,13 @@
 /**
  * Uploads a file to Cloudinary.
- * NOTE: For this sample, credentials are included in the code. In a real-world
- * application, these should be stored securely in environment variables.
  * @param file The file to upload.
  * @returns A promise that resolves with the secure URL of the uploaded file and a thumbnail URL.
  */
 export const uploadToCloudinary = async (file: File): Promise<{ url: string; thumbnailUrl?: string }> => {
-  // The correct cloud name is 'dlqxsa8zl'.
-  const cloudName = "dlqxsa8zl";
-  // As a final attempt, let's try using the same value as the cloud name for the upload preset.
+  // IMPORTANT: Replace with your Cloudinary cloud name and unsigned upload preset.
+  // You can find these in your Cloudinary dashboard settings.
+  const cloudName: string = "dlqxsa8zl";
   const uploadPreset = "dlqxsa8zl";
-
-  if (!cloudName || !uploadPreset) {
-    throw new Error("Cloudinary configuration (cloud name or upload preset) is missing.");
-  }
 
   const formData = new FormData();
   formData.append('file', file);

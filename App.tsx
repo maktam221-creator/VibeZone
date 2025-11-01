@@ -21,6 +21,7 @@ import { ConversationScreen } from './screens/ConversationScreen';
 import { DetailModal } from './screens/DetailModal';
 import { auth } from './services/firebase';
 import { ChangePasswordScreen } from './screens/ChangePasswordScreen';
+import { GenerateVideoScreen } from './screens/GenerateVideoScreen';
 
 export function App() {
   const [activeScreen, setActiveScreen] = useState<Screen>('feed');
@@ -69,7 +70,7 @@ export function App() {
   }, [allUsers]);
 
   const navigateTo = (screen: Screen) => {
-    if ((screen === 'profile' || screen === 'chat' || screen === 'create' || screen === 'live') && !isAuthenticated) {
+    if ((screen === 'profile' || screen === 'chat' || screen === 'create' || screen === 'live' || screen === 'generateVideo') && !isAuthenticated) {
         setLoginPrompt(true);
         return;
     }
@@ -311,7 +312,10 @@ export function App() {
             addVideoPost={handleAddVideoPost}
             currentUser={currentUser}
             onGoLive={() => setViewingStream(mockStreams[0])}
+            onGenerateVideo={() => navigateTo('generateVideo')}
             />;
+      case 'generateVideo':
+        return <GenerateVideoScreen onBack={goBack} />;
       case 'chat':
         return <ChatScreen 
             conversations={conversations} 
@@ -447,7 +451,7 @@ export function App() {
         />
       )}
       
-      {!(viewingUser || viewingConversationUser) && (
+      {!(viewingUser || viewingConversationUser || activeScreen === 'generateVideo') && (
         <BottomNav activeScreen={activeScreen} setActiveScreen={navigateTo} />
       )}
     </div>

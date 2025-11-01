@@ -62,6 +62,9 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onCancel }) => {
         case 'auth/operation-not-allowed':
           setError('عملية تسجيل الدخول/الاشتراك عبر البريد الإلكتروني غير مفعّلة. يرجى تفعيلها في إعدادات مشروع Firebase.');
           break;
+        case 'auth/too-many-requests':
+          setError('تم حظر الوصول مؤقتًا بسبب كثرة محاولات تسجيل الدخول الفاشلة. يرجى إعادة تعيين كلمة المرور أو المحاولة مرة أخرى لاحقًا.');
+          break;
         default:
           setError('حدث خطأ. يرجى المحاولة مرة أخرى.');
       }

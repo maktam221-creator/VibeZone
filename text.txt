@@ -1,0 +1,16 @@
+vibezone-project/
+├── package.json
+├── vite.config.ts
+├── vercel.json
+├── tsconfig.json
+├── tsconfig.node.json
+├── index.html
+├── src/
+│   ├── index.tsx
+│   ├── App.tsx
+│   ├── index.css
+│   ├── vite-env.d.ts
+│   ├── types.ts
+│   ├── data.ts
+│   └── services/
+│       └── firebase.ts

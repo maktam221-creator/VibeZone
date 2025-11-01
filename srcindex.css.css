@@ -1,0 +1,41 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  margin: 0;
+  font-family: 'Cairo', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background: black;
+  color: white;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+/* تخصيص شريط التمرير */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #1f1f1f;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #555;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #777;
+}
+
+/* تحسينات للشاشات الصغيرة */
+@media (max-width: 640px) {
+  body {
+    font-size: 14px;
+  }
+}

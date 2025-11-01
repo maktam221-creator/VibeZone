@@ -1,27 +1,26 @@
-
 import React, { useState, useEffect } from 'react';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
-import type { Screen, User, VideoPost, LiveStream, Comment, Conversation, UserMessage, StatsModalType } from './types.ts';
-import { mockVideos, initialUser, mockAllUsers, mockConversations, mockStreams } from './data.ts';
-import { FeedScreen } from './screens/FeedScreen.tsx';
-import { DiscoverScreen } from './screens/DiscoverScreen.tsx';
-import { CreateScreen } from './screens/CreateScreen.tsx';
-import { ChatScreen } from './screens/ChatScreen.tsx';
-import { ProfileScreen } from './screens/ProfileScreen.tsx';
-import { BottomNav } from './components/BottomNav.tsx';
-import { LiveScreen } from './screens/LiveScreen.tsx';
-import { LoginScreen } from './screens/LoginScreen.tsx';
-import { CommentsModal } from './screens/CommentsModal.tsx';
-import { LikesModal } from './screens/LikesModal.tsx';
-import { LiveStreamView } from './screens/LiveStreamView.tsx';
-import { EditProfileScreen } from './screens/EditProfileScreen.tsx';
-import { AccountScreen } from './screens/AccountScreen.tsx';
-import { PrivacyScreen } from './screens/PrivacyScreen.tsx';
-import { ConversationScreen } from './screens/ConversationScreen.tsx';
-import { DetailModal } from './screens/DetailModal.tsx';
-import { auth } from './services/firebase.ts';
-import { ChangePasswordScreen } from './screens/ChangePasswordScreen.tsx';
-import { GenerateVideoScreen } from './screens/GenerateVideoScreen.tsx';
+import type { Screen, User, VideoPost, LiveStream, Comment, Conversation, UserMessage, StatsModalType } from './types';
+import { mockVideos, initialUser, mockAllUsers, mockConversations, mockStreams } from './data';
+import { FeedScreen } from './screens/FeedScreen';
+import { DiscoverScreen } from './screens/DiscoverScreen';
+import { CreateScreen } from './screens/CreateScreen';
+import { ChatScreen } from './screens/ChatScreen';
+import { ProfileScreen } from './screens/ProfileScreen';
+import { BottomNav } from './components/BottomNav';
+import { LiveScreen } from './screens/LiveScreen';
+import { LoginScreen } from './screens/LoginScreen';
+import { CommentsModal } from './screens/CommentsModal';
+import { LikesModal } from './screens/LikesModal';
+import { LiveStreamView } from './screens/LiveStreamView';
+import { EditProfileScreen } from './screens/EditProfileScreen';
+import { AccountScreen } from './screens/AccountScreen';
+import { PrivacyScreen } from './screens/PrivacyScreen';
+import { ConversationScreen } from './screens/ConversationScreen';
+import { DetailModal } from './screens/DetailModal';
+import { auth } from './services/firebase';
+import { ChangePasswordScreen } from './screens/ChangePasswordScreen';
+import { GenerateVideoScreen } from './screens/GenerateVideoScreen';
 
 export function App() {
   const [activeScreen, setActiveScreen] = useState<Screen>('feed');
